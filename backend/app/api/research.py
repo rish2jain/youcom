@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
+from pydantic import BaseModel, EmailStr
 import logging
 from app.database import get_db
 from app.models.company_research import CompanyResearch
@@ -11,6 +13,9 @@ from app.schemas.company_research import (
     CompanyResearchRequest
 )
 from app.services.you_client import get_you_client, YouComAPIError, YouComOrchestrator
+from app.services.pdf_service import pdf_generator
+from app.services.email_service import get_email_service
+from app.config import settings
 
 router = APIRouter(prefix="/research", tags=["company-research"])
 logger = logging.getLogger(__name__)
@@ -105,5 +110,142 @@ async def get_research_by_company_name(
         .order_by(CompanyResearch.created_at.desc())
     )
     items = result.scalars().all()
-    
+
     return items
+
+
+# Pydantic model for email sharing
+class ShareResearchRequest(BaseModel):
+    """Request model for sharing research via email"""
+    emails: List[EmailStr]
+    subject: str = None
+    message: str = None
+
+
+@router.get("/{research_id}/export", response_class=StreamingResponse)
+async def export_research_pdf(
+    research_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Export company research as PDF
+
+    Returns a downloadable PDF file with the research report
+    """
+    try:
+        # Get research record
+        result = await db.execute(select(CompanyResearch).where(CompanyResearch.id == research_id))
+        research = result.scalar_one_or_none()
+
+        if not research:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Company research not found"
+            )
+
+        # Convert SQLAlchemy model to dict for PDF generation
+        research_data = {
+            'company_name': research.company_name,
+            'search_results': research.search_results,
+            'research_report': research.research_report,
+            'total_sources': research.total_sources,
+            'api_usage': research.api_usage,
+            'created_at': research.created_at
+        }
+
+        # Generate PDF
+        pdf_buffer = pdf_generator.generate_research_report(research_data)
+
+        # Return as streaming response
+        filename = f"{research.company_name.replace(' ', '_')}_research_report.pdf"
+
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to export research as PDF: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate PDF report"
+        )
+
+
+@router.post("/{research_id}/share", status_code=status.HTTP_200_OK)
+async def share_research_email(
+    research_id: int,
+    share_request: ShareResearchRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Share company research via email
+
+    Sends the research report as a PDF attachment to the specified email addresses
+    """
+    try:
+        # Get research record
+        result = await db.execute(select(CompanyResearch).where(CompanyResearch.id == research_id))
+        research = result.scalar_one_or_none()
+
+        if not research:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Company research not found"
+            )
+
+        # Convert SQLAlchemy model to dict for PDF generation
+        research_data = {
+            'company_name': research.company_name,
+            'search_results': research.search_results,
+            'research_report': research.research_report,
+            'total_sources': research.total_sources,
+            'api_usage': research.api_usage,
+            'created_at': research.created_at
+        }
+
+        # Generate PDF
+        pdf_buffer = pdf_generator.generate_research_report(research_data)
+
+        # Get email service
+        email_service = get_email_service(settings)
+        if not email_service:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Email service not configured. Please set SMTP settings."
+            )
+
+        # Send email
+        success = await email_service.send_research_report(
+            to_emails=share_request.emails,
+            company_name=research.company_name,
+            pdf_buffer=pdf_buffer,
+            subject=share_request.subject,
+            message=share_request.message
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send email"
+            )
+
+        return {
+            "message": "Research report shared successfully",
+            "recipients": share_request.emails,
+            "company_name": research.company_name
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to share research via email: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to share research report"
+        )

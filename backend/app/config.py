@@ -42,7 +42,14 @@ class Settings(BaseSettings):
     news_cache_ttl: int = 900  # 15 minutes
     search_cache_ttl: int = 3600  # 1 hour
     ari_cache_ttl: int = 604800  # 7 days
-    
+
+    # Email Configuration for sharing reports
+    smtp_host: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user: str = os.getenv("SMTP_USER", "")
+    smtp_password: str = os.getenv("SMTP_PASSWORD", "")
+    from_email: str = os.getenv("FROM_EMAIL", "noreply@enterprisecia.com")
+
     class Config:
         env_file = ".env"
         extra = "ignore"  # Ignore extra fields

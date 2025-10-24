@@ -32,6 +32,10 @@ export function CompanyResearch() {
   const [selectedResearch, setSelectedResearch] =
     useState<CompanyResearch | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareEmails, setShareEmails] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -80,6 +84,61 @@ export function CompanyResearch() {
 
     setActionError(null);
     researchMutation.mutate(query);
+  };
+
+  const handleExportPDF = async (research: CompanyResearch) => {
+    try {
+      setIsExporting(true);
+      setActionError(null);
+
+      const response = await api.get(`/api/v1/research/${research.id}/export`, {
+        responseType: 'blob',
+      });
+
+      // Create blob and download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${research.company_name.replace(/\s+/g, '_')}_research_report.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      setActionError('Failed to export PDF. Please try again.');
+      console.error('Export error:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!selectedResearch) return;
+
+    const emails = shareEmails.split(',').map(e => e.trim()).filter(e => e);
+    if (emails.length === 0) {
+      setActionError('Please enter at least one email address.');
+      return;
+    }
+
+    try {
+      setIsSharing(true);
+      setActionError(null);
+
+      await api.post(`/api/v1/research/${selectedResearch.id}/share`, {
+        emails: emails,
+      });
+
+      setShowShareDialog(false);
+      setShareEmails('');
+      alert(`Report shared successfully with ${emails.length} recipient(s)!`);
+    } catch (error) {
+      setActionError('Failed to share report. Please check your email settings.');
+      console.error('Share error:', error);
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const extractKeyInfo = (research: CompanyResearch) => {
@@ -284,11 +343,18 @@ export function CompanyResearch() {
               {selectedResearch.company_name} - Research Report
             </h3>
             <div className="flex items-center space-x-3">
-              <button className="flex items-center space-x-2 text-blue-600 hover:text-blue-700">
+              <button
+                onClick={() => handleExportPDF(selectedResearch)}
+                disabled={isExporting}
+                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 border border-blue-600 rounded-lg hover:bg-blue-50"
+              >
                 <Download className="w-4 h-4" />
-                <span>Export PDF</span>
+                <span>{isExporting ? 'Exporting...' : 'Export PDF'}</span>
               </button>
-              <button className="flex items-center space-x-2 text-green-600 hover:text-green-700">
+              <button
+                onClick={() => setShowShareDialog(true)}
+                className="flex items-center space-x-2 text-green-600 hover:text-green-700 px-3 py-2 border border-green-600 rounded-lg hover:bg-green-50"
+              >
                 <Share className="w-4 h-4" />
                 <span>Share</span>
               </button>
@@ -429,6 +495,64 @@ export function CompanyResearch() {
               </div>
             );
           })()}
+        </div>
+      )}
+
+      {/* Share Dialog Modal */}
+      {showShareDialog && selectedResearch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Share Research Report
+              </h3>
+              <button
+                onClick={() => setShowShareDialog(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Share <strong>{selectedResearch.company_name}</strong> research
+                report via email
+              </p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Addresses (comma-separated)
+              </label>
+              <input
+                type="text"
+                value={shareEmails}
+                onChange={(e) => setShareEmails(e.target.value)}
+                placeholder="email1@example.com, email2@example.com"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {actionError && (
+              <div className="mb-4 p-3 border border-red-200 bg-red-50 text-sm text-red-700 rounded-lg">
+                {actionError}
+              </div>
+            )}
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowShareDialog(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleShare}
+                disabled={isSharing || !shareEmails.trim()}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSharing ? 'Sharing...' : 'Share Report'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
