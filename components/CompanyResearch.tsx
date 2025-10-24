@@ -401,7 +401,7 @@ export function CompanyResearch() {
                     Company Overview (You.com Search API)
                   </h4>
                   <div className="space-y-3">
-                    {info.basicInfo.map((item, index) => (
+                    {info.basicInfo.map((item: any, index: number) => (
                       <div
                         key={index}
                         className="p-3 border-l-4 border-blue-500 bg-blue-50"

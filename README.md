@@ -2,6 +2,10 @@
 
 🏆 **You.com Hackathon Submission** - Showcasing all 4 You.com APIs in perfect orchestration
 
+**[📚 Documentation Index](DOCS_INDEX.md)** | **[🎯 MVP Roadmap](MVP_ROADMAP.md)** | **[🎬 Demo Guide](DEMO_CHECKLIST.md)** | **[🧪 Testing](TESTING.md)**
+
+---
+
 ## 🎯 Project Overview
 
 Enterprise CIA is an AI-powered competitive intelligence system that transforms information overload into actionable insights using **all 4 You.com APIs**. The MVP focuses on **individual users** (job seekers, investors, entrepreneurs, researchers, consultants) with enterprise features planned for the next version.
@@ -83,6 +87,8 @@ _Note: Advanced enterprise features (team collaboration, compliance, RBAC) are p
 - Redis 7+
 - You.com API Key
 
+> **Note**: The project includes all necessary dependencies, including `canvas-confetti` for success animations and TypeScript type definitions. Recent updates (Oct 24, 2025) include code cleanup, TypeScript fixes, and documentation consolidation.
+
 ### 1. Environment Setup
 
 ```bash
@@ -121,8 +127,7 @@ uvicorn app.main:app --reload
 ### 3. Frontend Setup
 
 ```bash
-# Install Node.js dependencies
-cd frontend
+# Install Node.js dependencies (from project root)
 npm install
 
 # Start Next.js development server
@@ -175,23 +180,33 @@ npm run dev
 
 ```
 enterprise-cia/
+├── app/                        # Next.js 14 App Router pages
+│   ├── page.tsx               # Main application page
+│   ├── api-showcase/          # API showcase page
+│   ├── layout.tsx             # Root layout
+│   └── providers.tsx          # React Query & context providers
+├── components/                 # React components (root level)
+│   ├── WatchList.tsx          # Competitive watchlist management
+│   ├── ImpactCardDisplay.tsx  # 🌟 Impact Card visualization
+│   ├── CompanyResearch.tsx    # Individual company research
+│   ├── APIUsageDashboard.tsx  # API metrics dashboard
+│   └── __tests__/             # Component tests
+├── lib/                        # Frontend utilities
+│   ├── api.ts                 # Axios client configuration
+│   └── socket.ts              # WebSocket client
 ├── backend/                    # Python FastAPI backend
 │   ├── app/
 │   │   ├── services/
-│   │   │   └── you_client.py   # 🌟 You.com API orchestration
-│   │   ├── api/                # REST API endpoints
-│   │   ├── models/             # Database models
-│   │   └── main.py             # FastAPI application
-├── frontend/                   # Next.js React frontend
-│   ├── src/
-│   │   ├── components/         # React components
-│   │   │   ├── WatchList.tsx   # Enterprise watchlist management
-│   │   │   ├── ImpactCardDisplay.tsx # 🌟 Impact Card visualization
-│   │   │   └── CompanyResearch.tsx   # Individual company research
-│   │   └── app/                # Next.js App Router
+│   │   │   └── you_client.py  # 🌟 You.com API orchestration
+│   │   ├── api/               # REST API endpoints
+│   │   ├── models/            # SQLAlchemy database models
+│   │   ├── schemas/           # Pydantic validation schemas
+│   │   └── main.py            # FastAPI application
+│   └── tests/                 # Backend test suite
 ├── scripts/
-│   └── seed_demo_data.py       # Generates demo records via live You.com calls
-└── docker-compose.yml          # Local development stack
+│   └── seed_demo_data.py      # Generates demo records via live You.com calls
+├── public/                     # Static assets
+└── docker-compose.yml         # Local development stack
 ```
 
 ## 🎪 Demo Script (3 Minutes)
@@ -261,10 +276,24 @@ This is a hackathon submission showcasing You.com API integration. For questions
 
 ## 📋 Project Documentation
 
-- **[MVP Roadmap](MVP_ROADMAP.md)** - Complete feature separation between MVP (individual users) and enterprise versions
-- **[Demo Checklist](DEMO_CHECKLIST.md)** - Hackathon presentation guide and success metrics
-- **[Testing Guide](TESTING.md)** - Comprehensive testing suite for all You.com API integrations
-- **[API Fixes](API_FIXES.md)** - Critical You.com API endpoint corrections for demo success
+### Essential Guides
+
+- **[📚 Documentation Index](DOCS_INDEX.md)** - Complete guide to all documentation
+- **[🎯 MVP Roadmap](MVP_ROADMAP.md)** - Feature scope: MVP (individual users) vs Enterprise
+- **[🎬 Demo Checklist](DEMO_CHECKLIST.md)** - 3-minute demo script and pre-demo setup
+- **[📹 Video Timestamps](VIDEO_TIMESTAMPS.md)** - Video production guide for demo recording
+- **[🧪 Testing Guide](TESTING.md)** - Comprehensive testing suite (95%+ coverage)
+- **[⚡ Quick Test Guide](QUICK_TEST_GUIDE.md)** - 5-minute pre-demo API verification
+- **[🔧 API Fixes](API_FIXES.md)** - Critical You.com API endpoint corrections
+- **[📋 Repository Guidelines](AGENTS.md)** - Development conventions and standards
+
+### Additional Resources
+
+- **[📊 Cleanup Report](claudedocs/cleanup-report-2025-10-24.md)** - Recent code cleanup and optimization
+- **[🏗️ Implementation Review](claudedocs/IMPLEMENTATION_REVIEW.md)** - Complete code analysis
+- **[🎨 Design Feedback](claudedocs/design-feedback-consolidated.md)** - UI/UX improvements
+
+> **New to the project?** Start with [DOCS_INDEX.md](DOCS_INDEX.md) for guided navigation.
 
 ---
 

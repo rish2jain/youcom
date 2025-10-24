@@ -270,7 +270,7 @@ export function ImpactCardDisplay() {
       const message = resolveStepMessage(payload.step, payload);
       setProgressLog((prev) =>
         [...prev, {
-          status: "step",
+          status: "step" as const,
           message,
           timestamp: new Date().toISOString(),
           competitor,

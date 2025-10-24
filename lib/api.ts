@@ -14,11 +14,6 @@ export const api = axios.create({
 // Request interceptor for logging
 api.interceptors.request.use(
   (config) => {
-    if (isDev) {
-      console.log(
-        `🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`
-      );
-    }
     return config;
   },
   (error) => {
@@ -30,9 +25,6 @@ api.interceptors.request.use(
 // Response interceptor for logging and error handling
 api.interceptors.response.use(
   (response) => {
-    if (isDev) {
-      console.log(`✅ API Response: ${response.status} ${response.config.url}`);
-    }
     return response;
   },
   (error) => {
