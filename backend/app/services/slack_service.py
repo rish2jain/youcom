@@ -1,0 +1,302 @@
+"""Slack integration service for notifications"""
+import httpx
+import logging
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+
+class SlackService:
+    """Service for sending notifications to Slack"""
+
+    def __init__(self, webhook_url: Optional[str] = None, bot_token: Optional[str] = None):
+        self.webhook_url = webhook_url
+        self.bot_token = bot_token
+        self.api_base = "https://slack.com/api"
+
+    async def send_webhook_message(self, message: str, blocks: Optional[List[Dict]] = None) -> bool:
+        """Send message via webhook"""
+        if not self.webhook_url:
+            logger.warning("⚠️ Slack webhook URL not configured")
+            return False
+
+        try:
+            payload = {"text": message}
+            if blocks:
+                payload["blocks"] = blocks
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self.webhook_url,
+                    json=payload,
+                    timeout=10.0
+                )
+
+            if response.status_code == 200:
+                logger.info(f"✅ Slack message sent successfully")
+                return True
+            else:
+                logger.error(f"❌ Slack API error: {response.status_code} - {response.text}")
+                return False
+
+        except Exception as e:
+            logger.error(f"❌ Failed to send Slack message: {str(e)}")
+            return False
+
+    async def send_channel_message(
+        self,
+        channel: str,
+        message: str,
+        blocks: Optional[List[Dict]] = None
+    ) -> bool:
+        """Send message to specific channel using bot token"""
+        if not self.bot_token:
+            logger.warning("⚠️ Slack bot token not configured")
+            return False
+
+        try:
+            payload = {
+                "channel": channel,
+                "text": message
+            }
+            if blocks:
+                payload["blocks"] = blocks
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.api_base}/chat.postMessage",
+                    headers={
+                        "Authorization": f"Bearer {self.bot_token}",
+                        "Content-Type": "application/json"
+                    },
+                    json=payload,
+                    timeout=10.0
+                )
+
+            data = response.json()
+            if data.get("ok"):
+                logger.info(f"✅ Slack message sent to {channel}")
+                return True
+            else:
+                logger.error(f"❌ Slack API error: {data.get('error')}")
+                return False
+
+        except Exception as e:
+            logger.error(f"❌ Failed to send Slack message: {str(e)}")
+            return False
+
+    async def send_impact_alert(
+        self,
+        competitor_name: str,
+        risk_score: int,
+        risk_level: str,
+        summary: str,
+        url: Optional[str] = None
+    ) -> bool:
+        """Send competitive impact alert to Slack"""
+
+        # Color based on risk level
+        color_map = {
+            "critical": "#FF0000",
+            "high": "#FF6B00",
+            "medium": "#FFA500",
+            "low": "#00CC00"
+        }
+        color = color_map.get(risk_level.lower(), "#808080")
+
+        # Create rich message blocks
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"🚨 Competitive Impact Alert: {competitor_name}"
+                }
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*Risk Score:*\n{risk_score}/100"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*Risk Level:*\n{risk_level.upper()}"
+                    }
+                ]
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Summary:*\n{summary}"
+                }
+            }
+        ]
+
+        if url:
+            blocks.append({
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "View Full Analysis"
+                        },
+                        "url": url,
+                        "style": "primary"
+                    }
+                ]
+            })
+
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"Generated by Enterprise CIA • {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+                }
+            ]
+        })
+
+        message = f"New impact alert for {competitor_name} - Risk: {risk_level.upper()} ({risk_score}/100)"
+
+        # Try webhook first, fall back to bot token
+        if self.webhook_url:
+            # Webhooks don't support full blocks API, use attachment
+            attachment = {
+                "text": message,
+                "attachments": [{
+                    "color": color,
+                    "blocks": blocks
+                }]
+            }
+            return await self.send_webhook_message(message, blocks)
+        elif self.bot_token:
+            # Default channel (could be configured)
+            return await self.send_channel_message("general", message, blocks)
+        else:
+            logger.warning("⚠️ No Slack configuration available")
+            return False
+
+    async def send_scheduled_report(
+        self,
+        report_name: str,
+        summary: str,
+        pdf_url: Optional[str] = None
+    ) -> bool:
+        """Send scheduled report notification"""
+
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"📊 Scheduled Report: {report_name}"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": summary
+                }
+            }
+        ]
+
+        if pdf_url:
+            blocks.append({
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Download Report"
+                        },
+                        "url": pdf_url,
+                        "style": "primary"
+                    }
+                ]
+            })
+
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"Enterprise CIA • {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+                }
+            ]
+        })
+
+        message = f"Scheduled report '{report_name}' is ready"
+
+        if self.webhook_url:
+            return await self.send_webhook_message(message, blocks)
+        elif self.bot_token:
+            return await self.send_channel_message("general", message, blocks)
+        else:
+            return False
+
+    async def send_simple_notification(self, message: str) -> bool:
+        """Send simple text notification"""
+        if self.webhook_url:
+            return await self.send_webhook_message(message)
+        elif self.bot_token:
+            return await self.send_channel_message("general", message)
+        else:
+            return False
+
+    async def test_connection(self) -> Dict[str, Any]:
+        """Test Slack connection"""
+        if not self.bot_token and not self.webhook_url:
+            return {
+                "success": False,
+                "error": "No Slack configuration available"
+            }
+
+        try:
+            if self.bot_token:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"{self.api_base}/auth.test",
+                        headers={"Authorization": f"Bearer {self.bot_token}"},
+                        timeout=10.0
+                    )
+                    data = response.json()
+
+                    if data.get("ok"):
+                        return {
+                            "success": True,
+                            "team": data.get("team"),
+                            "user": data.get("user"),
+                            "bot_id": data.get("bot_id")
+                        }
+                    else:
+                        return {
+                            "success": False,
+                            "error": data.get("error")
+                        }
+
+            elif self.webhook_url:
+                # Test webhook with a simple message
+                test_result = await self.send_webhook_message("Enterprise CIA connection test")
+                return {
+                    "success": test_result,
+                    "method": "webhook"
+                }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+
+def get_slack_service(webhook_url: Optional[str] = None, bot_token: Optional[str] = None) -> SlackService:
+    """Factory function to create Slack service"""
+    return SlackService(webhook_url=webhook_url, bot_token=bot_token)

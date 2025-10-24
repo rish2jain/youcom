@@ -17,6 +17,7 @@ from app.config import settings
 from app.database import engine, Base, get_db
 from app.api import watch, impact, research
 from app.api import metrics, notifications, feedback
+from app.api import auth, workspaces
 from app.realtime import sio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -77,12 +78,17 @@ app.add_middleware(
 )
 
 # Include API routers
+# Core features
 app.include_router(watch.router, prefix="/api/v1")
 app.include_router(impact.router, prefix="/api/v1")
 app.include_router(research.router, prefix="/api/v1")
 app.include_router(metrics.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(feedback.router, prefix="/api/v1")
+
+# Enterprise features
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(workspaces.router, prefix="/api/v1")
 
 # Socket.IO events for real-time updates
 @sio.event
