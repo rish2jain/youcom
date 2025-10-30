@@ -3,6 +3,10 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import SecretStr, field_validator
 from typing import Optional
+from dotenv import load_dotenv
+
+# Load .env file from parent directory
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 class Settings(BaseSettings):
     # You.com API Configuration
