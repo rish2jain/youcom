@@ -25,7 +25,7 @@ except ImportError:
     requests = None
 
 from app.models.integration_marketplace import (
-    IntegrationDeveloper, Integration, MarketplaceIntegrationInstallation,
+    IntegrationDeveloper, MarketplaceIntegration, MarketplaceIntegrationInstallation,
     IntegrationReview, IntegrationWebhook, IntegrationAnalytics,
     IntegrationPayout, IntegrationSupport, MarketplaceSettings,
     IntegrationStatus, IntegrationCategory, PricingModel, DeveloperTier
@@ -138,7 +138,7 @@ class IntegrationMarketplaceService:
         self, 
         developer_id: int, 
         integration_data: Dict[str, Any]
-    ) -> Integration:
+    ) -> MarketplaceIntegration:
         """Create a new integration"""
         try:
             # Validate developer
@@ -157,7 +157,7 @@ class IntegrationMarketplaceService:
             slug = self._generate_slug(integration_data["name"])
             
             # Create integration
-            integration = Integration(
+            integration = MarketplaceIntegration(
                 developer_id=developer_id,
                 name=integration_data["name"],
                 slug=slug,
@@ -193,11 +193,11 @@ class IntegrationMarketplaceService:
             self.db.rollback()
             raise
 
-    async def submit_for_review(self, integration_id: int) -> Integration:
+    async def submit_for_review(self, integration_id: int) -> MarketplaceIntegration:
         """Submit integration for marketplace review"""
         try:
-            integration = self.db.query(Integration).filter(
-                Integration.id == integration_id
+            integration = self.db.query(MarketplaceIntegration).filter(
+                MarketplaceIntegration.id == integration_id
             ).first()
             
             if not integration:
@@ -233,11 +233,11 @@ class IntegrationMarketplaceService:
         integration_id: int, 
         reviewer_id: str,
         review_notes: str = None
-    ) -> Integration:
+    ) -> MarketplaceIntegration:
         """Approve integration for marketplace publication"""
         try:
-            integration = self.db.query(Integration).filter(
-                Integration.id == integration_id
+            integration = self.db.query(MarketplaceIntegration).filter(
+                MarketplaceIntegration.id == integration_id
             ).first()
             
             if not integration:
@@ -270,11 +270,11 @@ class IntegrationMarketplaceService:
             self.db.rollback()
             raise
 
-    async def publish_integration(self, integration_id: int) -> Integration:
+    async def publish_integration(self, integration_id: int) -> MarketplaceIntegration:
         """Publish integration to marketplace"""
         try:
-            integration = self.db.query(Integration).filter(
-                Integration.id == integration_id
+            integration = self.db.query(MarketplaceIntegration).filter(
+                MarketplaceIntegration.id == integration_id
             ).first()
             
             if not integration:
@@ -317,8 +317,8 @@ class IntegrationMarketplaceService:
     ) -> MarketplaceIntegrationInstallation:
         """Install integration for a user"""
         try:
-            integration = self.db.query(Integration).filter(
-                Integration.id == integration_id
+            integration = self.db.query(MarketplaceIntegration).filter(
+                MarketplaceIntegration.id == integration_id
             ).first()
             
             if not integration:
@@ -431,8 +431,8 @@ class IntegrationMarketplaceService:
         """Search integrations in marketplace"""
         try:
             # Build query
-            db_query = self.db.query(Integration).filter(
-                Integration.status == IntegrationStatus.PUBLISHED
+            db_query = self.db.query(MarketplaceIntegration).filter(
+                MarketplaceIntegration.status == IntegrationStatus.PUBLISHED
             )
             
             # Apply filters
@@ -440,30 +440,30 @@ class IntegrationMarketplaceService:
                 search_term = f"%{query}%"
                 db_query = db_query.filter(
                     or_(
-                        Integration.name.ilike(search_term),
-                        Integration.description.ilike(search_term),
-                        Integration.short_description.ilike(search_term)
+                        MarketplaceIntegration.name.ilike(search_term),
+                        MarketplaceIntegration.description.ilike(search_term),
+                        MarketplaceIntegration.short_description.ilike(search_term)
                     )
                 )
             
             if category:
-                db_query = db_query.filter(Integration.category == category)
+                db_query = db_query.filter(MarketplaceIntegration.category == category)
             
             if pricing_model:
-                db_query = db_query.filter(Integration.pricing_model == pricing_model)
+                db_query = db_query.filter(MarketplaceIntegration.pricing_model == pricing_model)
             
             if featured_only:
-                db_query = db_query.filter(Integration.featured == True)
+                db_query = db_query.filter(MarketplaceIntegration.featured == True)
             
             # Get total count
             total_count = db_query.count()
             
             # Apply sorting and pagination
             integrations = db_query.order_by(
-                desc(Integration.featured),
-                desc(Integration.trending_score),
-                desc(Integration.average_rating),
-                desc(Integration.total_installs)
+                desc(MarketplaceIntegration.featured),
+                desc(MarketplaceIntegration.trending_score),
+                desc(MarketplaceIntegration.average_rating),
+                desc(MarketplaceIntegration.total_installs)
             ).offset(offset).limit(limit).all()
             
             # Format results
@@ -510,8 +510,8 @@ class IntegrationMarketplaceService:
     ) -> Dict[str, Any]:
         """Get analytics for an integration"""
         try:
-            integration = self.db.query(Integration).filter(
-                Integration.id == integration_id
+            integration = self.db.query(MarketplaceIntegration).filter(
+                MarketplaceIntegration.id == integration_id
             ).first()
             
             if not integration:
@@ -646,13 +646,13 @@ class IntegrationMarketplaceService:
         # Check for uniqueness
         counter = 1
         slug = base_slug
-        while self.db.query(Integration).filter(Integration.slug == slug).first():
+        while self.db.query(MarketplaceIntegration).filter(MarketplaceIntegration.slug == slug).first():
             slug = f"{base_slug}-{counter}"
             counter += 1
         
         return slug
 
-    async def _validate_integration(self, integration: Integration) -> List[str]:
+    async def _validate_integration(self, integration: MarketplaceIntegration) -> List[str]:
         """Validate integration for marketplace submission"""
         errors = []
         
@@ -676,29 +676,29 @@ class IntegrationMarketplaceService:
         
         return errors
 
-    async def _notify_review_team(self, integration: Integration):
+    async def _notify_review_team(self, integration: MarketplaceIntegration):
         """Notify review team of new submission"""
         # Would send email/notification to review team
         logger.info(f"Review team notified of integration submission: {integration.name}")
 
-    async def _notify_developer_approval(self, integration: Integration):
+    async def _notify_developer_approval(self, integration: MarketplaceIntegration):
         """Notify developer of integration approval"""
         # Would send email to developer
         logger.info(f"Developer notified of integration approval: {integration.name}")
 
-    async def _notify_developer_published(self, integration: Integration):
+    async def _notify_developer_published(self, integration: MarketplaceIntegration):
         """Notify developer of integration publication"""
         # Would send email to developer
         logger.info(f"Developer notified of integration publication: {integration.name}")
 
-    async def _index_integration_for_search(self, integration: Integration):
+    async def _index_integration_for_search(self, integration: MarketplaceIntegration):
         """Index integration for search functionality"""
         # Would integrate with search engine (Elasticsearch, etc.)
         logger.info(f"Integration indexed for search: {integration.name}")
 
     async def _create_subscription(
         self, 
-        integration: Integration, 
+        integration: MarketplaceIntegration, 
         user_id: str, 
         installation: MarketplaceIntegrationInstallation
     ) -> str:
@@ -743,7 +743,7 @@ class IntegrationMarketplaceService:
 
     async def _send_installation_webhook(
         self, 
-        integration: Integration, 
+        integration: MarketplaceIntegration, 
         installation: MarketplaceIntegrationInstallation, 
         event_type: str,
         background_tasks = None
@@ -894,8 +894,8 @@ class IntegrationMarketplaceService:
     ) -> Dict[str, Any]:
         """Calculate revenue for developer in given period"""
         # Get developer's integrations
-        integrations = self.db.query(Integration).filter(
-            Integration.developer_id == developer_id
+        integrations = self.db.query(MarketplaceIntegration).filter(
+            MarketplaceIntegration.developer_id == developer_id
         ).all()
         
         total_revenue = 0.0

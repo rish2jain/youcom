@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import AsyncSessionLocal
 from app.models.benchmarking import (
-    BenchmarkMetric, TrendAnalysis, AnomalyDetection
+    BenchmarkResult, TrendAnalysis, PerformanceAlert
 )
 from app.realtime import emit_progress
 
@@ -169,25 +169,25 @@ class TrendAnalyzer:
         """Get metric data from database"""
         async with AsyncSessionLocal() as session:
             conditions = [
-                BenchmarkMetric.metric_name == metric_name,
-                BenchmarkMetric.measurement_timestamp >= start_date,
-                BenchmarkMetric.measurement_timestamp <= end_date
+                BenchmarkResult.metric_name == metric_name,
+                BenchmarkResult.measurement_timestamp >= start_date,
+                BenchmarkResult.measurement_timestamp <= end_date
             ]
             
             if entity_id:
                 if entity_type == "workspace":
-                    conditions.append(BenchmarkMetric.workspace_id == entity_id)
+                    conditions.append(BenchmarkResult.workspace_id == entity_id)
                 elif entity_type == "user":
-                    conditions.append(BenchmarkMetric.user_id == entity_id)
+                    conditions.append(BenchmarkResult.user_id == entity_id)
             
             result = await session.execute(
                 select(
-                    BenchmarkMetric.metric_value,
-                    BenchmarkMetric.measurement_timestamp,
-                    BenchmarkMetric.metric_metadata
+                    BenchmarkResult.metric_value,
+                    BenchmarkResult.measurement_timestamp,
+                    BenchmarkResult.metric_metadata
                 )
                 .where(and_(*conditions))
-                .order_by(BenchmarkMetric.measurement_timestamp)
+                .order_by(BenchmarkResult.measurement_timestamp)
             )
             
             return [
@@ -479,25 +479,25 @@ class AnomalyDetector:
         """Get metric data from database"""
         async with AsyncSessionLocal() as session:
             conditions = [
-                BenchmarkMetric.metric_name == metric_name,
-                BenchmarkMetric.measurement_timestamp >= start_date,
-                BenchmarkMetric.measurement_timestamp <= end_date
+                BenchmarkResult.metric_name == metric_name,
+                BenchmarkResult.measurement_timestamp >= start_date,
+                BenchmarkResult.measurement_timestamp <= end_date
             ]
             
             if entity_id:
                 if entity_type == "workspace":
-                    conditions.append(BenchmarkMetric.workspace_id == entity_id)
+                    conditions.append(BenchmarkResult.workspace_id == entity_id)
                 elif entity_type == "user":
-                    conditions.append(BenchmarkMetric.user_id == entity_id)
+                    conditions.append(BenchmarkResult.user_id == entity_id)
             
             result = await session.execute(
                 select(
-                    BenchmarkMetric.metric_value,
-                    BenchmarkMetric.measurement_timestamp,
-                    BenchmarkMetric.metric_metadata
+                    BenchmarkResult.metric_value,
+                    BenchmarkResult.measurement_timestamp,
+                    BenchmarkResult.metric_metadata
                 )
                 .where(and_(*conditions))
-                .order_by(BenchmarkMetric.measurement_timestamp)
+                .order_by(BenchmarkResult.measurement_timestamp)
             )
             
             return [
@@ -866,7 +866,7 @@ class AnomalyDetector:
     ) -> int:
         """Store anomaly detection result in database"""
         async with AsyncSessionLocal() as session:
-            anomaly_record = AnomalyDetection(
+            anomaly_record = PerformanceAlert(
                 metric_name=anomaly.metric_name,
                 entity_id=anomaly.entity_id,
                 entity_type=anomaly.entity_type,
@@ -934,10 +934,10 @@ async def analyze_all_metrics_trends(
     # Get list of available metrics
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(BenchmarkMetric.metric_name)
+            select(BenchmarkResult.metric_name)
             .distinct()
             .where(
-                BenchmarkMetric.measurement_timestamp >= start_date
+                BenchmarkResult.measurement_timestamp >= start_date
             )
         )
         
@@ -979,10 +979,10 @@ async def detect_all_metrics_anomalies(
     # Get list of available metrics
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(BenchmarkMetric.metric_name)
+            select(BenchmarkResult.metric_name)
             .distinct()
             .where(
-                BenchmarkMetric.measurement_timestamp >= start_date
+                BenchmarkResult.measurement_timestamp >= start_date
             )
         )
         

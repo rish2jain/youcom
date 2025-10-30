@@ -17,7 +17,7 @@ from app.models.sentiment_analysis import (
     SentimentAnalysis, SentimentTrend, SentimentAlert, SentimentProcessingQueue
 )
 # Removed circular import - YouComClient not actually used in this file
-from app.services.sentiment_classifier import entity_recognizer, sentiment_classifier
+from app.services.sentiment_classifier import get_entity_recognizer, get_sentiment_classifier
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -56,10 +56,10 @@ class SentimentProcessor:
         
         try:
             # Extract entities from content using advanced recognizer
-            entity_results = await entity_recognizer.recognize_entities(content_text)
+            entity_results = await get_entity_recognizer().recognize_entities(content_text)
             
             # Classify sentiment using advanced classifier
-            sentiment_result = await sentiment_classifier.classify_sentiment(content_text, entity_results)
+            sentiment_result = await get_sentiment_classifier().classify_sentiment(content_text, entity_results)
             
             # Store results in database
             async with AsyncSessionLocal() as db:

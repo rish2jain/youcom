@@ -18,7 +18,7 @@ from redis.exceptions import RedisError
 
 from app.database import AsyncSessionLocal
 from app.config import settings
-from app.models.benchmarking import BenchmarkMetric, IndustryBenchmark
+from app.models.benchmarking import BenchmarkResult, MetricsSnapshot
 from app.models.api_call_log import ApiCallLog
 from app.models.impact_card import ImpactCard
 from app.models.watch import WatchItem
@@ -402,11 +402,11 @@ class MetricsAggregator:
             return 0
         
         async with AsyncSessionLocal() as session:
-            # Create BenchmarkMetric records
+            # Create BenchmarkResult records
             metrics_to_store = []
             
             for dp in data_points:
-                metric = BenchmarkMetric(
+                metric = BenchmarkResult(
                     metric_name=dp.metric_name,
                     metric_category=dp.category,
                     source_system=dp.source_system,
@@ -448,7 +448,7 @@ class MetricsAggregator:
             }
             
             # Mean
-            metrics_to_store.append(BenchmarkMetric(
+            metrics_to_store.append(BenchmarkResult(
                 metric_name=f"{aggregated.metric_name}_mean",
                 metric_category=category,
                 source_system=source_system,
@@ -461,7 +461,7 @@ class MetricsAggregator:
             ))
             
             # Median
-            metrics_to_store.append(BenchmarkMetric(
+            metrics_to_store.append(BenchmarkResult(
                 metric_name=f"{aggregated.metric_name}_median",
                 metric_category=category,
                 source_system=source_system,
@@ -475,7 +475,7 @@ class MetricsAggregator:
             
             # Percentiles
             for percentile, value in aggregated.percentiles.items():
-                metrics_to_store.append(BenchmarkMetric(
+                metrics_to_store.append(BenchmarkResult(
                     metric_name=f"{aggregated.metric_name}_p{percentile}",
                     metric_category=category,
                     source_system=source_system,

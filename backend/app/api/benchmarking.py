@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.benchmarking import (
-    BenchmarkMetric, IndustryBenchmark, TrendAnalysis, 
-    AnomalyDetection, BenchmarkComparison
+    BenchmarkResult, MetricsSnapshot, TrendAnalysis, 
+    PerformanceAlert, BenchmarkComparison
 )
 from app.services.metrics_aggregator import metrics_aggregator, run_metrics_collection
 from app.services.benchmark_calculator import benchmark_calculator, calculate_workspace_benchmarks
@@ -201,22 +201,22 @@ async def get_workspace_metrics(
         
         # Build query conditions
         conditions = [
-            BenchmarkMetric.workspace_id == workspace_id,
-            BenchmarkMetric.measurement_timestamp >= start_date,
-            BenchmarkMetric.measurement_timestamp <= end_date
+            BenchmarkResult.workspace_id == workspace_id,
+            BenchmarkResult.measurement_timestamp >= start_date,
+            BenchmarkResult.measurement_timestamp <= end_date
         ]
         
         if metric_name:
-            conditions.append(BenchmarkMetric.metric_name == metric_name)
+            conditions.append(BenchmarkResult.metric_name == metric_name)
         
         if aggregation != "raw":
-            conditions.append(BenchmarkMetric.time_period == aggregation)
+            conditions.append(BenchmarkResult.time_period == aggregation)
         
         # Execute query
         result = await db.execute(
-            select(BenchmarkMetric)
+            select(BenchmarkResult)
             .where(and_(*conditions))
-            .order_by(BenchmarkMetric.measurement_timestamp.desc())
+            .order_by(BenchmarkResult.measurement_timestamp.desc())
             .limit(1000)  # Limit to prevent large responses
         )
         
@@ -422,17 +422,17 @@ async def get_industry_benchmarks(
     """Get industry benchmark data"""
     try:
         conditions = [
-            IndustryBenchmark.industry_sector == industry_sector,
-            IndustryBenchmark.benchmark_type == benchmark_type
+            MetricsSnapshot.industry_sector == industry_sector,
+            MetricsSnapshot.benchmark_type == benchmark_type
         ]
         
         if metric_name:
-            conditions.append(IndustryBenchmark.metric_name == metric_name)
+            conditions.append(MetricsSnapshot.metric_name == metric_name)
         
         result = await db.execute(
-            select(IndustryBenchmark)
+            select(MetricsSnapshot)
             .where(and_(*conditions))
-            .order_by(desc(IndustryBenchmark.created_at))
+            .order_by(desc(MetricsSnapshot.created_at))
         )
         
         benchmarks = result.scalars().all()
@@ -579,7 +579,7 @@ async def benchmarking_health_check(session: AsyncSession = Depends(get_db)):
     """Health check endpoint for benchmarking service"""
     try:
         # Test database connection
-        result = await session.execute(select(func.count(BenchmarkMetric.id)))
+        result = await session.execute(select(func.count(BenchmarkResult.id)))
         metric_count = result.scalar()
         
         return {

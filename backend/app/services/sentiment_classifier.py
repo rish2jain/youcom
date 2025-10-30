@@ -477,6 +477,18 @@ class SentimentClassifier:
         )
 
 
-# Global instances
-entity_recognizer = EntityRecognizer()
-sentiment_classifier = SentimentClassifier()
+# Global instances - lazy initialization
+entity_recognizer = None
+sentiment_classifier = None
+
+def get_entity_recognizer():
+    global entity_recognizer
+    if entity_recognizer is None:
+        entity_recognizer = EntityRecognizer()
+    return entity_recognizer
+
+def get_sentiment_classifier():
+    global sentiment_classifier
+    if sentiment_classifier is None:
+        sentiment_classifier = SentimentClassifier()
+    return sentiment_classifier

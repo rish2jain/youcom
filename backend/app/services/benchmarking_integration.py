@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc, func
 
-from app.models.benchmarking import BenchmarkMetric, BenchmarkComparison, IndustryBenchmark
+from app.models.benchmarking import BenchmarkResult, BenchmarkComparison, MetricsSnapshot
 from app.models.notification import NotificationRule, NotificationLog
 from app.services.benchmark_calculator import benchmark_calculator, BenchmarkResult
 from app.services.metrics_aggregator import metrics_aggregator, MetricDataPoint
@@ -572,8 +572,8 @@ class BenchmarkingIntegrationService:
         try:
             # Get recent benchmark metrics count
             recent_metrics = await self.db.execute(
-                select(func.count(BenchmarkMetric.id))
-                .where(BenchmarkMetric.measurement_timestamp >= datetime.utcnow() - timedelta(hours=24))
+                select(func.count(BenchmarkResult.id))
+                .where(BenchmarkResult.measurement_timestamp >= datetime.utcnow() - timedelta(hours=24))
             )
             
             metrics_24h = recent_metrics.scalar() or 0

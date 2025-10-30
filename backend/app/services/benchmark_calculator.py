@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import AsyncSessionLocal
 from app.models.benchmarking import (
-    BenchmarkMetric, IndustryBenchmark, BenchmarkComparison
+    BenchmarkResult, MetricsSnapshot, BenchmarkComparison
 )
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class BenchmarkResult:
 
 
 @dataclass
-class IndustryBenchmarkData:
+class MetricsSnapshotData:
     """Industry benchmark data structure"""
     industry_sector: str
     metric_name: str
@@ -93,20 +93,20 @@ class BenchmarkCalculator:
         industry_sector: str,
         metric_name: str,
         benchmark_type: str = "percentile"
-    ) -> Optional[IndustryBenchmarkData]:
+    ) -> Optional[MetricsSnapshotData]:
         """Get industry benchmark data for a metric"""
         async with AsyncSessionLocal() as session:
             # Get the most recent benchmark data
             result = await session.execute(
-                select(IndustryBenchmark)
+                select(MetricsSnapshot)
                 .where(
                     and_(
-                        IndustryBenchmark.industry_sector == industry_sector,
-                        IndustryBenchmark.metric_name == metric_name,
-                        IndustryBenchmark.benchmark_type == benchmark_type
+                        MetricsSnapshot.industry_sector == industry_sector,
+                        MetricsSnapshot.metric_name == metric_name,
+                        MetricsSnapshot.benchmark_type == benchmark_type
                     )
                 )
-                .order_by(desc(IndustryBenchmark.created_at))
+                .order_by(desc(MetricsSnapshot.created_at))
                 .limit(1)
             )
             
@@ -117,16 +117,16 @@ class BenchmarkCalculator:
             
             # Get all percentile data for this industry/metric
             percentile_result = await session.execute(
-                select(IndustryBenchmark)
+                select(MetricsSnapshot)
                 .where(
                     and_(
-                        IndustryBenchmark.industry_sector == industry_sector,
-                        IndustryBenchmark.metric_name == metric_name,
-                        IndustryBenchmark.benchmark_type == "percentile",
-                        IndustryBenchmark.percentile_rank.isnot(None)
+                        MetricsSnapshot.industry_sector == industry_sector,
+                        MetricsSnapshot.metric_name == metric_name,
+                        MetricsSnapshot.benchmark_type == "percentile",
+                        MetricsSnapshot.percentile_rank.isnot(None)
                     )
                 )
-                .order_by(IndustryBenchmark.percentile_rank)
+                .order_by(MetricsSnapshot.percentile_rank)
             )
             
             percentile_benchmarks = percentile_result.scalars().all()
@@ -142,7 +142,7 @@ class BenchmarkCalculator:
             # Get the actual mean value from the benchmark record
             mean_value = benchmark.mean_value if hasattr(benchmark, 'mean_value') and benchmark.mean_value else 0.0
             
-            return IndustryBenchmarkData(
+            return MetricsSnapshotData(
                 industry_sector=industry_sector,
                 metric_name=metric_name,
                 percentiles=percentiles,
@@ -158,18 +158,18 @@ class BenchmarkCalculator:
         metric_name: str,
         start_date: datetime,
         end_date: datetime
-    ) -> IndustryBenchmarkData:
+    ) -> MetricsSnapshotData:
         """Create industry benchmarks from historical data"""
         async with AsyncSessionLocal() as session:
             # Get all metric values for the industry in the time period
             result = await session.execute(
-                select(BenchmarkMetric.metric_value)
+                select(BenchmarkResult.metric_value)
                 .where(
                     and_(
-                        BenchmarkMetric.industry_sector == industry_sector,
-                        BenchmarkMetric.metric_name == metric_name,
-                        BenchmarkMetric.measurement_timestamp >= start_date,
-                        BenchmarkMetric.measurement_timestamp <= end_date
+                        BenchmarkResult.industry_sector == industry_sector,
+                        BenchmarkResult.metric_name == metric_name,
+                        BenchmarkResult.measurement_timestamp >= start_date,
+                        BenchmarkResult.measurement_timestamp <= end_date
                     )
                 )
             )
@@ -195,7 +195,7 @@ class BenchmarkCalculator:
             benchmark_records = []
             
             for percentile, value in percentiles.items():
-                benchmark = IndustryBenchmark(
+                benchmark = MetricsSnapshot(
                     industry_sector=industry_sector,
                     metric_name=metric_name,
                     benchmark_type="percentile",
@@ -218,7 +218,7 @@ class BenchmarkCalculator:
                 benchmark_records.append(benchmark)
             
             # Store mean as separate benchmark
-            mean_benchmark = IndustryBenchmark(
+            mean_benchmark = MetricsSnapshot(
                 industry_sector=industry_sector,
                 metric_name=metric_name,
                 benchmark_type="mean",
@@ -240,7 +240,7 @@ class BenchmarkCalculator:
             
             logger.info(f"Created industry benchmarks for {industry_sector}/{metric_name}")
             
-            return IndustryBenchmarkData(
+            return MetricsSnapshotData(
                 industry_sector=industry_sector,
                 metric_name=metric_name,
                 percentiles=percentiles,
@@ -263,18 +263,18 @@ class BenchmarkCalculator:
         async with AsyncSessionLocal() as session:
             # Get entity's metric values
             conditions = [
-                BenchmarkMetric.metric_name == metric_name,
-                BenchmarkMetric.measurement_timestamp >= start_date,
-                BenchmarkMetric.measurement_timestamp <= end_date
+                BenchmarkResult.metric_name == metric_name,
+                BenchmarkResult.measurement_timestamp >= start_date,
+                BenchmarkResult.measurement_timestamp <= end_date
             ]
             
             if entity_type == "workspace":
-                conditions.append(BenchmarkMetric.workspace_id == entity_id)
+                conditions.append(BenchmarkResult.workspace_id == entity_id)
             elif entity_type == "user":
-                conditions.append(BenchmarkMetric.user_id == entity_id)
+                conditions.append(BenchmarkResult.user_id == entity_id)
             
             result = await session.execute(
-                select(BenchmarkMetric.metric_value)
+                select(BenchmarkResult.metric_value)
                 .where(and_(*conditions))
             )
             
@@ -297,12 +297,12 @@ class BenchmarkCalculator:
             if not benchmark_data:
                 # Get all values for this metric (system-wide benchmark)
                 all_values_result = await session.execute(
-                    select(BenchmarkMetric.metric_value)
+                    select(BenchmarkResult.metric_value)
                     .where(
                         and_(
-                            BenchmarkMetric.metric_name == metric_name,
-                            BenchmarkMetric.measurement_timestamp >= start_date,
-                            BenchmarkMetric.measurement_timestamp <= end_date
+                            BenchmarkResult.metric_name == metric_name,
+                            BenchmarkResult.measurement_timestamp >= start_date,
+                            BenchmarkResult.measurement_timestamp <= end_date
                         )
                     )
                 )

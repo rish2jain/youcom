@@ -21,7 +21,7 @@ from app.models.sentiment_analysis import (
 from app.services.sentiment_processor import sentiment_processor
 from app.services.sentiment_trend_analyzer import sentiment_trend_analyzer
 from app.services.sentiment_alert_worker import sentiment_alert_worker
-from app.services.sentiment_classifier import entity_recognizer, sentiment_classifier
+from app.services.sentiment_classifier import get_entity_recognizer, get_sentiment_classifier
 
 logger = logging.getLogger(__name__)
 
