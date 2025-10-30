@@ -4,7 +4,7 @@ Specialized agent for strategic recommendations and implications.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 import uuid
 
@@ -25,7 +25,7 @@ class StrategyAgent:
         
         try:
             self.status = AgentStatus.WORKING
-            task.started_at = datetime.utcnow()
+            task.started_at = datetime.now(timezone.utc)
             
             if task.task_type == "generate_recommendations":
                 result = await self._generate_recommendations(task.input_data)
@@ -40,7 +40,7 @@ class StrategyAgent:
             
             task.result = result
             task.status = AgentStatus.COMPLETED
-            task.completed_at = datetime.utcnow()
+            task.completed_at = datetime.now(timezone.utc)
             self.status = AgentStatus.IDLE
             
             logger.info(f"✅ Strategy Agent {self.agent_id} completed task")

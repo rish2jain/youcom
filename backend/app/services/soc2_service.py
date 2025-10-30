@@ -5,7 +5,7 @@ Security controls, audit trails, and compliance monitoring.
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from enum import Enum
 import uuid
@@ -57,7 +57,7 @@ class SOC2AuditLog(Base):
     risk_level = Column(String(20), default="low")
     
     # Immutability controls
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     checksum = Column(String(64))  # SHA-256 hash for integrity
     
     def __init__(self, **kwargs):
@@ -106,8 +106,8 @@ class SecurityControl(Base):
     compliance_notes = Column(Text)
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 class SOC2Service:
     """SOC 2 compliance service"""
@@ -287,7 +287,7 @@ class SOC2Service:
                 }
                 
                 control_details = []
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 
                 for control in controls:
                     status_summary[control.status] += 1
@@ -344,7 +344,7 @@ class SOC2Service:
                 
                 # Update control
                 control.status = status.value
-                control.last_reviewed_at = datetime.utcnow()
+                control.last_reviewed_at = datetime.now(timezone.utc)
                 
                 if implementation_details:
                     control.implementation_details = implementation_details

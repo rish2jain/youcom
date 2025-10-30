@@ -13,7 +13,23 @@ from app.schemas.impact_card import (
     ImpactCardList,
     ImpactCardGenerate
 )
+from pydantic import BaseModel, Field
+from enum import Enum
+
+class FeedbackType(str, Enum):
+    accuracy = "accuracy"
+    relevance = "relevance"
+    severity = "severity"
+    category = "category"
+
+class MLFeedbackRequest(BaseModel):
+    feedback_type: FeedbackType
+    original_value: float = Field(ge=0.0, le=1.0)
+    corrected_value: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(ge=0.0, le=1.0, default=0.8)
+    user_id: str
 from app.services.you_client import get_you_client, YouComAPIError, YouComOrchestrator
+from app.services.ml_integration_service import MLIntegrationService
 from app.realtime import emit_progress
 
 router = APIRouter(prefix="/impact", tags=["impact-cards"])
@@ -80,6 +96,13 @@ async def generate_impact_card(
             keywords=request.keywords,
             progress_room="impact_cards",
             db_session=db,
+        )
+        
+        # Enhance with ML predictions
+        ml_service = MLIntegrationService(db)
+        impact_data = await ml_service.enhance_impact_card_generation(
+            impact_data, 
+            request.competitor_name
         )
         
         # Create database record
@@ -170,6 +193,13 @@ async def generate_impact_card_for_watch(
             keywords=watch_item.keywords,
             progress_room="impact_cards",
             db_session=db,
+        )
+        
+        # Enhance with ML predictions
+        ml_service = MLIntegrationService(db)
+        impact_data = await ml_service.enhance_impact_card_generation(
+            impact_data, 
+            watch_item.competitor_name
         )
         
         # Create database record
@@ -319,3 +349,57 @@ async def get_impact_cards_for_watch(
     total = len(count_result.scalars().all())
     
     return ImpactCardList(items=items, total=total)
+
+@router.post("/{card_id}/feedback")
+async def submit_ml_feedback(
+    card_id: int,
+    feedback: MLFeedbackRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Submit ML feedback for an impact card"""
+    # Verify impact card exists
+    result = await db.execute(select(ImpactCard).where(ImpactCard.id == card_id))
+    impact_card = result.scalar_one_or_none()
+    
+    if not impact_card:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Impact Card not found"
+        )
+    
+    try:
+        ml_service = MLIntegrationService(db)
+        result = await ml_service.process_user_feedback(
+            card_id,
+            feedback.dict(),
+            feedback.user_id
+        )
+        
+        return {
+            "message": "Feedback submitted successfully",
+            "feedback_id": result["feedback_id"],
+            "retraining_triggered": result["retraining_triggered"],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error submitting feedback: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to submit feedback"
+        )
+
+@router.get("/ml/performance")
+async def get_ml_performance(db: AsyncSession = Depends(get_db)):
+    """Get ML model performance status"""
+    try:
+        ml_service = MLIntegrationService(db)
+        performance_status = await ml_service.get_model_performance_status()
+        return performance_status
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting ML performance: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get ML performance status"
+        )

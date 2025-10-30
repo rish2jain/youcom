@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import SecretStr, field_validator
 from typing import Optional
@@ -76,6 +77,13 @@ class Settings(BaseSettings):
     
     # Frontend URL for links in notifications
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
+    # HubSpot Integration Configuration
+    hubspot_client_id: str = os.getenv("HUBSPOT_CLIENT_ID", "")
+    hubspot_client_secret: SecretStr = SecretStr(os.getenv("HUBSPOT_CLIENT_SECRET", ""))
+    
+    # Data directory for ML models and storage
+    data_dir: str = os.getenv("DATA_DIR") or str(Path(__file__).resolve().parent.parent.parent / "data")
 
     @field_validator('google_redirect_uri', 'azure_redirect_uri', 'okta_redirect_uri')
     @classmethod

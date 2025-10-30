@@ -6,7 +6,7 @@ Competitive Intelligence Agent powered by You.com APIs
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 from fastapi import FastAPI, HTTPException, Depends
@@ -175,6 +175,24 @@ app.include_router(integration_marketplace.router)
 from app.api import enhancements
 app.include_router(enhancements.router)
 
+# Advanced Intelligence Suite - ML Feedback and Training
+from app.api import ml_feedback, ml_features, ml_training
+app.include_router(ml_feedback.router, prefix="/api/v1")
+app.include_router(ml_features.router, prefix="/api/v1")
+app.include_router(ml_training.router, prefix="/api/v1")
+
+# Advanced Intelligence Suite - Industry Templates
+from app.api import industry_templates
+app.include_router(industry_templates.router, prefix="/api/v1")
+
+# Advanced Intelligence Suite - Benchmarking Dashboard
+from app.api import benchmarking
+app.include_router(benchmarking.router, prefix="/api/v1")
+
+# Advanced Intelligence Suite - Sentiment Analysis
+from app.api import sentiment
+app.include_router(sentiment.router, prefix="/api/v1")
+
 # Socket.IO events for real-time updates
 @sio.event
 async def connect(sid, environ):
@@ -268,7 +286,7 @@ async def _run_you_api_checks() -> Dict[str, Any]:
         overall = "unhealthy"
 
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "overall_status": overall,
         "apis": api_results,
         "resilience_status": client.get_health_status(),
@@ -279,7 +297,7 @@ async def _run_you_api_checks() -> Dict[str, Any]:
 async def check_you_apis():
     """Health check for all You.com APIs with short-lived caching."""
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     cached = YOU_API_HEALTH_CACHE.get("data")
     cached_at = YOU_API_HEALTH_CACHE.get("timestamp")
 
@@ -305,7 +323,7 @@ async def check_resilience_status():
         degraded_circuits = sum(1 for state in circuit_states if state == "half_open")
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "summary": {
                 "total_circuits": len(circuit_states),
                 "open_circuits": open_circuits,

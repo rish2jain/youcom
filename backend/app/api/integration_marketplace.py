@@ -15,7 +15,7 @@ import logging
 
 from app.database import get_db
 from app.models.integration_marketplace import (
-    IntegrationDeveloper, Integration, IntegrationInstallation,
+    IntegrationDeveloper, MarketplaceIntegration, MarketplaceIntegrationInstallation,
     IntegrationReview, IntegrationAnalytics, IntegrationSupport
 )
 from app.services.integration_marketplace import IntegrationMarketplaceService
@@ -186,8 +186,8 @@ async def get_integration_details(
 ):
     """Get detailed information about an integration"""
     try:
-        integration = db.query(Integration).filter(
-            Integration.id == integration_id
+        integration = db.query(MarketplaceIntegration).filter(
+            MarketplaceIntegration.id == integration_id
         ).first()
         
         if not integration:
@@ -378,17 +378,17 @@ async def get_my_installations(
 ):
     """Get user's installed integrations"""
     try:
-        query = db.query(IntegrationInstallation).filter(
-            IntegrationInstallation.user_id == current_user.id
+        query = db.query(MarketplaceIntegrationInstallation).filter(
+            MarketplaceIntegrationInstallation.user_id == current_user.id
         )
         
         if workspace_id:
-            query = query.filter(IntegrationInstallation.workspace_id == workspace_id)
+            query = query.filter(MarketplaceIntegrationInstallation.workspace_id == workspace_id)
         
         if status:
-            query = query.filter(IntegrationInstallation.status == status)
+            query = query.filter(MarketplaceIntegrationInstallation.status == status)
         
-        installations = query.order_by(IntegrationInstallation.installed_at.desc()).all()
+        installations = query.order_by(MarketplaceIntegrationInstallation.installed_at.desc()).all()
         
         return [
             {
@@ -429,10 +429,10 @@ async def create_integration_review(
     """Create a review for an integration"""
     try:
         # Check if user has installed the integration
-        installation = db.query(IntegrationInstallation).filter(
+        installation = db.query(MarketplaceIntegrationInstallation).filter(
             and_(
-                IntegrationInstallation.integration_id == integration_id,
-                IntegrationInstallation.user_id == current_user.id
+                MarketplaceIntegrationInstallation.integration_id == integration_id,
+                MarketplaceIntegrationInstallation.user_id == current_user.id
             )
         ).first()
         
@@ -464,11 +464,11 @@ async def create_integration_review(
         # Update integration rating atomically in database
         from sqlalchemy import update
         db.execute(
-            update(Integration)
-            .where(Integration.id == integration_id)
+            update(MarketplaceIntegration)
+            .where(MarketplaceIntegration.id == integration_id)
             .values(
-                total_reviews=Integration.total_reviews + 1,
-                average_rating=(Integration.average_rating * Integration.total_reviews + review_data["rating"]) / (Integration.total_reviews + 1)
+                total_reviews=MarketplaceIntegration.total_reviews + 1,
+                average_rating=(MarketplaceIntegration.average_rating * MarketplaceIntegration.total_reviews + review_data["rating"]) / (MarketplaceIntegration.total_reviews + 1)
             )
         )
         
@@ -555,7 +555,7 @@ async def get_integration_analytics(
     """Get analytics for an integration (developer only)"""
     try:
         # Check if user is the developer of this integration
-        integration = db.query(Integration).filter(Integration.id == integration_id).first()
+        integration = db.query(MarketplaceIntegration).filter(MarketplaceIntegration.id == integration_id).first()
         if not integration:
             raise HTTPException(status_code=404, detail="Integration not found")
         
@@ -600,27 +600,27 @@ async def get_marketplace_stats(
     """Get marketplace statistics"""
     try:
         # Get basic counts
-        total_integrations = db.query(Integration).filter(
-            Integration.status == "published"
+        total_integrations = db.query(MarketplaceIntegration).filter(
+            MarketplaceIntegration.status == "published"
         ).count()
         
         total_developers = db.query(IntegrationDeveloper).count()
         
-        total_installs = db.query(func.sum(Integration.total_installs)).scalar() or 0
+        total_installs = db.query(func.sum(MarketplaceIntegration.total_installs)).scalar() or 0
         
         # Get category breakdown
         category_stats = db.query(
-            Integration.category,
-            func.count(Integration.id).label("count")
+            MarketplaceIntegration.category,
+            func.count(MarketplaceIntegration.id).label("count")
         ).filter(
-            Integration.status == "published"
-        ).group_by(Integration.category).all()
+            MarketplaceIntegration.status == "published"
+        ).group_by(MarketplaceIntegration.category).all()
         
         # Get featured integrations
-        featured_integrations = db.query(Integration).filter(
+        featured_integrations = db.query(MarketplaceIntegration).filter(
             and_(
-                Integration.status == "published",
-                Integration.featured == True
+                MarketplaceIntegration.status == "published",
+                MarketplaceIntegration.featured == True
             )
         ).limit(6).all()
         

@@ -2,7 +2,7 @@
 Service for managing evidence badges and confidence scoring.
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
@@ -32,7 +32,7 @@ class EvidenceBadgeService:
     def __init__(self, db: Session):
         self.db = db
     
-    def create_evidence_badge(
+    async def create_evidence_badge(
         self,
         entity_type: str,
         entity_id: int,
@@ -120,7 +120,7 @@ class EvidenceBadgeService:
         entity_id: int
     ) -> Optional[EvidenceBadgeResponse]:
         """Get evidence badge with expanded source details."""
-        badge = await self.get_evidence_badge(entity_type, entity_id)
+        badge = self.get_evidence_badge(entity_type, entity_id)
         if not badge:
             return None
         
@@ -167,7 +167,7 @@ class EvidenceBadgeService:
         entity_id: int
     ) -> Optional[ConfidenceMetrics]:
         """Get simplified confidence metrics for display."""
-        badge = await self.get_evidence_badge(entity_type, entity_id)
+        badge = self.get_evidence_badge(entity_type, entity_id)
         if not badge:
             return None
         
@@ -202,7 +202,7 @@ class EvidenceBadgeService:
             quality_indicators=quality_indicators
         )
     
-    async def _analyze_sources(self, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _analyze_sources(self, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze source quality and characteristics."""
         if not sources:
             return {
@@ -228,7 +228,7 @@ class EvidenceBadgeService:
             # Calculate source age
             publish_date = self._parse_publish_date(source.get("publish_date"))
             if publish_date:
-                age_hours = (datetime.utcnow() - publish_date).total_seconds() / 3600
+                age_hours = (datetime.now(timezone.utc) - publish_date).total_seconds() / 3600
                 source_ages.append(age_hours)
         
         # Calculate freshness metrics

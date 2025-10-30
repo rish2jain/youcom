@@ -6,7 +6,7 @@ Specialized AI agents for comprehensive competitive intelligence analysis.
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
 from dataclasses import dataclass, field
@@ -37,7 +37,7 @@ class AgentTask:
     task_type: str
     input_data: Dict[str, Any]
     priority: int = 5  # 1-10, 10 being highest
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     result: Optional[Dict[str, Any]] = None
@@ -58,7 +58,7 @@ class ResearchAgent:
         
         try:
             self.status = AgentStatus.WORKING
-            task.started_at = datetime.utcnow()
+            task.started_at = datetime.now(timezone.utc)
             
             if task.task_type == "gather_news":
                 result = await self._gather_news(task.input_data)
@@ -73,7 +73,7 @@ class ResearchAgent:
             
             task.result = result
             task.status = AgentStatus.COMPLETED
-            task.completed_at = datetime.utcnow()
+            task.completed_at = datetime.now(timezone.utc)
             self.status = AgentStatus.IDLE
             
             logger.info(f"✅ Research Agent {self.agent_id} completed task")
@@ -88,7 +88,7 @@ class ResearchAgent:
     
     async def _gather_news(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Gather news from multiple sources"""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         competitor = input_data.get("competitor", "")
         keywords = input_data.get("keywords", [])
         
@@ -111,7 +111,7 @@ class ResearchAgent:
             })
         
         # Calculate processing time (start_time should be captured at method beginning)
-        processing_time = (datetime.utcnow() - start_time).total_seconds() if 'start_time' in locals() else 0.0
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds() if 'start_time' in locals() else 0.0
         
         return {
             "articles": processed_articles,
@@ -326,7 +326,7 @@ class ResearchAgent:
         
         try:
             pub_date = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-            days_old = (datetime.utcnow() - pub_date.replace(tzinfo=None)).days
+            days_old = (datetime.now(timezone.utc) - pub_date.astimezone(timezone.utc)).days
             
             if days_old <= 1:
                 return 1.0
@@ -387,7 +387,7 @@ class AnalysisAgent:
         
         try:
             self.status = AgentStatus.WORKING
-            task.started_at = datetime.utcnow()
+            task.started_at = datetime.now(timezone.utc)
             
             if task.task_type == "assess_impact":
                 result = await self._assess_impact(task.input_data)
@@ -402,7 +402,7 @@ class AnalysisAgent:
             
             task.result = result
             task.status = AgentStatus.COMPLETED
-            task.completed_at = datetime.utcnow()
+            task.completed_at = datetime.now(timezone.utc)
             self.status = AgentStatus.IDLE
             
             logger.info(f"✅ Analysis Agent {self.agent_id} completed task")

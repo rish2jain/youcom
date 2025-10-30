@@ -5,7 +5,7 @@ Google, Azure AD, and Okta SSO authentication for enterprise users.
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 import secrets
@@ -288,8 +288,8 @@ class SSOService:
         self.state_storage[state] = {
             "provider": provider,
             "workspace_id": workspace_id,
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(minutes=10)
+            "created_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10)
         }
         
         # Get authorization URL from provider
@@ -314,7 +314,7 @@ class SSOService:
         state_data = self.state_storage[state]
         
         # Check expiration
-        if datetime.utcnow() > state_data["expires_at"]:
+        if datetime.now(timezone.utc) > state_data["expires_at"]:
             del self.state_storage[state]
             raise SSOError("State parameter expired", provider=provider)
         
@@ -378,7 +378,7 @@ class SSOService:
             # Update existing user
             existing_user.sso_provider = provider
             existing_user.sso_id = self._extract_user_id(user_info, provider)
-            existing_user.last_login = datetime.utcnow()
+            existing_user.last_login = datetime.now(timezone.utc)
             
             if full_name and not existing_user.full_name:
                 existing_user.full_name = full_name
@@ -461,7 +461,7 @@ class SSOService:
     
     def cleanup_expired_states(self):
         """Clean up expired state parameters"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired_states = [
             state for state, data in self.state_storage.items()
             if data["expires_at"] < now

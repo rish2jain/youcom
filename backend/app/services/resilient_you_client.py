@@ -8,7 +8,7 @@ import json
 import logging
 import time
 from contextlib import suppress
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
@@ -67,7 +67,7 @@ class APICircuitBreaker:
     
     def record_success(self):
         """Record successful API call"""
-        self.state.last_success_time = datetime.utcnow()
+        self.state.last_success_time = datetime.now(timezone.utc)
         
         if self.state.state == CircuitState.HALF_OPEN:
             self.state.success_count += 1
@@ -80,7 +80,7 @@ class APICircuitBreaker:
     
     def record_failure(self):
         """Record failed API call"""
-        self.state.last_failure_time = datetime.utcnow()
+        self.state.last_failure_time = datetime.now(timezone.utc)
         self.state.failure_count += 1
         
         if self.state.failure_count >= self.config.failure_threshold:
@@ -92,7 +92,7 @@ class APICircuitBreaker:
         if not self.state.last_failure_time:
             return True
         
-        elapsed = datetime.utcnow() - self.state.last_failure_time
+        elapsed = datetime.now(timezone.utc) - self.state.last_failure_time
         return elapsed.total_seconds() >= self.config.recovery_timeout
 
 class QueryOptimizer:
@@ -454,7 +454,7 @@ class ResilientYouComOrchestrator(YouComOrchestrator):
             # Return minimal fallback card
             return {
                 "competitor": competitor,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
                 "risk_score": 50,
                 "risk_level": "medium",
                 "confidence_score": 30,

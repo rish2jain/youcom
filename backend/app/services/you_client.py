@@ -18,6 +18,7 @@ from app.realtime import emit_progress
 from app.database import AsyncSessionLocal
 from app.models.api_call_log import ApiCallLog
 from app.models.notification import NotificationRule, NotificationLog
+# Removed circular import - will import dynamically when needed
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -923,11 +924,22 @@ Format the response with clear sections and actionable insights."""
                 news_query += " " + " ".join(keywords)
             
             news_data = await self.fetch_news(news_query)
+            
+            # Enhance news with sentiment analysis
+            if db_session:
+                # Dynamic import to avoid circular dependency
+                from app.services.sentiment_news_integration import SentimentNewsIntegrationService
+                sentiment_integration = SentimentNewsIntegrationService(db_session)
+                news_data = await sentiment_integration.process_news_with_sentiment(
+                    news_data, competitor
+                )
+            
             await self._notify_progress(
                 competitor,
                 "news",
                 progress_room=progress_room,
                 articles=len(news_data.get("articles", [])),
+                sentiment_summary=news_data.get("sentiment_summary", {})
             )
             
             # Step 2: Search API - Enrich with context
@@ -1243,6 +1255,9 @@ Analysis of competitive positioning shows differentiated approach with unique va
             "timestamp": datetime.utcnow().isoformat(),
             "demo_mode": True
         }
+
+# Alias for backward compatibility
+YouComClient = YouComOrchestrator
 
 async def get_you_client():
     """FastAPI dependency that yields a managed You.com client."""

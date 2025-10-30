@@ -21,6 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.models.api_call_log import ApiCallLog
+from app.models.ml_training import ModelPerformanceMetric, TrainingJob
+# Removed circular import - will import dynamically when needed
 from app.realtime import emit_progress
 
 logger = logging.getLogger(__name__)
@@ -113,7 +115,13 @@ class MetricsCollector:
         if self.redis_client:
             try:
                 pattern = f"metrics:{name}:*"
-                keys = await self.redis_client.keys(pattern)
+                keys = []
+                cursor = 0
+                while True:
+                    cursor, batch_keys = await self.redis_client.scan(cursor=cursor, match=pattern, count=100)
+                    keys.extend(batch_keys)
+                    if cursor == 0:
+                        break
                 
                 metrics = []
                 for key in keys:
@@ -177,6 +185,7 @@ class PerformanceAnalyzer:
             "success_rate": {"warning": 0.95, "critical": 0.90},  # percentage
             "cache_hit_rate": {"warning": 0.70, "critical": 0.50},  # percentage
             "error_rate": {"warning": 0.05, "critical": 0.10},  # percentage
+            "ml_f1_score": {"warning": 0.85, "critical": 0.75},  # ML model performance
         }
     
     async def analyze_system_health(self) -> SystemHealth:
@@ -202,6 +211,18 @@ class PerformanceAnalyzer:
         scores.append(cache_score)
         issues.extend(cache_issues)
         recommendations.extend(cache_recs)
+        
+        # Analyze ML model performance
+        ml_score, ml_issues, ml_recs = await self._analyze_ml_performance()
+        scores.append(ml_score)
+        issues.extend(ml_issues)
+        recommendations.extend(ml_recs)
+        
+        # Analyze benchmarking performance
+        benchmark_score, benchmark_issues, benchmark_recs = await self._analyze_benchmark_performance()
+        scores.append(benchmark_score)
+        issues.extend(benchmark_issues)
+        recommendations.extend(benchmark_recs)
         
         # Calculate overall score
         overall_score = statistics.mean(scores) if scores else 0.0
@@ -324,6 +345,125 @@ class PerformanceAnalyzer:
             recommendations.append("Urgent: Review cache strategy and increase TTL")
         
         return score, issues, recommendations
+    
+    async def _analyze_ml_performance(self) -> Tuple[float, List[str], List[str]]:
+        """Analyze ML model performance"""
+        issues = []
+        recommendations = []
+        
+        try:
+            async with AsyncSessionLocal() as session:
+                # Get latest ML model performance metrics
+                result = await session.execute(
+                    select(ModelPerformanceMetric)
+                    .where(ModelPerformanceMetric.metric_name == "f1_score")
+                    .where(ModelPerformanceMetric.evaluation_timestamp >= datetime.utcnow() - timedelta(hours=24))
+                    .order_by(desc(ModelPerformanceMetric.evaluation_timestamp))
+                )
+                
+                recent_metrics = result.scalars().all()
+                
+                if not recent_metrics:
+                    return 50, ["No recent ML model performance data"], ["Set up ML model monitoring"]
+                
+                # Calculate average F1 score across all models
+                f1_scores = [metric.metric_value for metric in recent_metrics]
+                avg_f1_score = sum(f1_scores) / len(f1_scores)
+                
+                # Check for failing models
+                failing_models = []
+                for metric in recent_metrics:
+                    if metric.metric_value < self.thresholds["ml_f1_score"]["critical"]:
+                        failing_models.append(metric.model_type)
+                
+                # Calculate score
+                if avg_f1_score >= self.thresholds["ml_f1_score"]["warning"]:
+                    score = 100
+                elif avg_f1_score >= self.thresholds["ml_f1_score"]["critical"]:
+                    score = 70
+                    issues.append(f"ML model performance is degraded (avg F1: {avg_f1_score:.3f})")
+                    recommendations.append("Review ML model training data and retrain models")
+                else:
+                    score = 30
+                    issues.append(f"ML model performance is critical (avg F1: {avg_f1_score:.3f})")
+                    recommendations.append("Urgent: Retrain ML models with fresh data")
+                
+                if failing_models:
+                    issues.append(f"Failing ML models: {', '.join(set(failing_models))}")
+                    recommendations.append("Investigate and retrain failing ML models")
+                
+                # Check for recent training failures
+                training_result = await session.execute(
+                    select(TrainingJob)
+                    .where(TrainingJob.status == "failed")
+                    .where(TrainingJob.created_at >= datetime.utcnow() - timedelta(hours=24))
+                )
+                
+                failed_jobs = training_result.scalars().all()
+                if failed_jobs:
+                    issues.append(f"{len(failed_jobs)} ML training jobs failed in the last 24 hours")
+                    recommendations.append("Review ML training job failures and fix issues")
+                
+                return score, issues, recommendations
+                
+        except Exception as e:
+            logger.error(f"Error analyzing ML performance: {e}")
+            return 50, ["ML performance analysis failed"], ["Check ML monitoring system"]
+    
+    async def _analyze_benchmark_performance(self) -> Tuple[float, List[str], List[str]]:
+        """Analyze benchmarking system performance"""
+        issues = []
+        recommendations = []
+        
+        try:
+            async with AsyncSessionLocal() as session:
+                # Initialize benchmarking integration service (dynamic import to avoid circular dependency)
+                from app.services.benchmarking_integration import BenchmarkingIntegrationService
+                benchmark_integration = BenchmarkingIntegrationService(session)
+                
+                # Get integration status
+                integration_status = await benchmark_integration.get_integration_status()
+                
+                health = integration_status.get("integration_health", "poor")
+                metrics = integration_status.get("metrics", {})
+                
+                # Calculate score based on health and metrics
+                if health == "excellent":
+                    score = 100
+                elif health == "good":
+                    score = 80
+                elif health == "fair":
+                    score = 60
+                    issues.append("Benchmarking system performance is fair")
+                    recommendations.append("Increase benchmark data collection frequency")
+                else:
+                    score = 30
+                    issues.append("Benchmarking system performance is poor")
+                    recommendations.append("Review benchmarking system configuration")
+                
+                # Check specific metrics
+                metrics_24h = metrics.get("benchmark_metrics_24h", 0)
+                comparisons_24h = metrics.get("benchmark_comparisons_24h", 0)
+                
+                if metrics_24h == 0:
+                    issues.append("No benchmark metrics collected in the last 24 hours")
+                    recommendations.append("Check benchmark metrics collection process")
+                
+                if comparisons_24h == 0:
+                    issues.append("No benchmark comparisons performed in the last 24 hours")
+                    recommendations.append("Trigger benchmark comparison calculations")
+                
+                # Check for benchmark alerts
+                alerts_triggered = metrics.get("alerts_triggered", 0)
+                if alerts_triggered > 10:
+                    issues.append(f"High number of benchmark alerts: {alerts_triggered}")
+                    recommendations.append("Investigate performance issues causing benchmark alerts")
+                
+                return score, issues, recommendations
+                
+        except Exception as e:
+            logger.error(f"Error analyzing benchmark performance: {e}")
+            return 50, ["Benchmark performance analysis failed"], ["Check benchmarking system"]
 
 class RealTimeMonitor:
     """Real-time performance monitoring and alerting"""

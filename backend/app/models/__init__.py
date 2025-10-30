@@ -32,7 +32,39 @@ from .whitelabel import (  # noqa: F401
 
 # Week 4 models - Integration Marketplace
 from .integration_marketplace import (  # noqa: F401
-    IntegrationDeveloper, Integration as MarketplaceIntegration, IntegrationInstallation,
+    IntegrationDeveloper, MarketplaceIntegration, MarketplaceIntegrationInstallation,
     IntegrationReview, IntegrationWebhook, IntegrationAnalytics,
     IntegrationPayout, IntegrationSupport, MarketplaceSettings
+)
+
+# Advanced Intelligence Suite - ML Training models
+from .ml_training import (  # noqa: F401
+    FeedbackRecord, ModelPerformanceMetric, TrainingJob
+)
+
+# Advanced Intelligence Suite - Model Registry
+from .ml_model_registry import ModelRegistryRecord, ABTestRecord  # noqa: F401
+
+# Advanced Intelligence Suite - Industry Templates
+from .industry_template import IndustryTemplate, TemplateApplication  # noqa: F401
+
+# Advanced Intelligence Suite - Benchmarking
+from .benchmarking import (  # noqa: F401
+    BenchmarkResult, MetricsSnapshot, TrendAnalysis, 
+    PerformanceAlert, BenchmarkComparison
+)
+
+# Advanced Intelligence Suite - Sentiment Analysis
+from .sentiment_analysis import (  # noqa: F401
+    SentimentAnalysis, SentimentTrend, SentimentAlert, SentimentProcessingQueue
+)
+
+# Advanced Intelligence Suite - HubSpot Integration
+from .hubspot_integration import (  # noqa: F401
+    HubSpotIntegration, HubSpotSyncLog, HubSpotCustomProperty, HubSpotWorkflowTrigger
+)
+
+# Advanced Intelligence Suite - Obsidian Integration
+from .obsidian_integration import (  # noqa: F401
+    ObsidianIntegration, ObsidianSyncLog, ObsidianNoteMapping, ObsidianNoteTemplate
 )

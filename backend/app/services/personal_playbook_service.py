@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, desc
+from sqlalchemy import and_, desc, update
 
 from ..models.personal_playbook import PersonaPreset, UserPlaybook, PlaybookExecution, PlaybookTemplate
 from ..schemas.personal_playbook import (
@@ -95,8 +95,12 @@ class PersonalPlaybookService:
         self.db.commit()
         self.db.refresh(playbook)
         
-        # Increment usage count for persona preset
-        persona_preset.usage_count += 1
+        # Increment usage count for persona preset atomically
+        self.db.execute(
+            update(PersonaPreset)
+            .where(PersonaPreset.id == persona_preset.id)
+            .values(usage_count=PersonaPreset.usage_count + 1)
+        )
         self.db.commit()
         
         logger.info(f"Created user playbook for user {user_id} with persona {persona_preset.name}")
@@ -218,8 +222,15 @@ class PersonalPlaybookService:
             ).first()
             
             if playbook:
-                playbook.usage_count += 1
-                playbook.last_used = datetime.now(timezone.utc)
+                # Update usage count and last_used atomically
+                self.db.execute(
+                    update(UserPlaybook)
+                    .where(UserPlaybook.id == playbook.id)
+                    .values(
+                        usage_count=UserPlaybook.usage_count + 1,
+                        last_used=datetime.now(timezone.utc)
+                    )
+                )
             
             self.db.commit()
             self.db.refresh(execution)

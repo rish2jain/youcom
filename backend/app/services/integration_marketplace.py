@@ -25,7 +25,7 @@ except ImportError:
     requests = None
 
 from app.models.integration_marketplace import (
-    IntegrationDeveloper, Integration, IntegrationInstallation,
+    IntegrationDeveloper, Integration, MarketplaceIntegrationInstallation,
     IntegrationReview, IntegrationWebhook, IntegrationAnalytics,
     IntegrationPayout, IntegrationSupport, MarketplaceSettings,
     IntegrationStatus, IntegrationCategory, PricingModel, DeveloperTier
@@ -193,7 +193,7 @@ class IntegrationMarketplaceService:
             self.db.rollback()
             raise
 
-    def submit_for_review(self, integration_id: int) -> Integration:
+    async def submit_for_review(self, integration_id: int) -> Integration:
         """Submit integration for marketplace review"""
         try:
             integration = self.db.query(Integration).filter(
@@ -228,7 +228,7 @@ class IntegrationMarketplaceService:
             self.db.rollback()
             raise
 
-    def approve_integration(
+    async def approve_integration(
         self, 
         integration_id: int, 
         reviewer_id: str,
@@ -314,7 +314,7 @@ class IntegrationMarketplaceService:
         user_id: str,
         workspace_id: str = None,
         configuration: Dict[str, Any] = None
-    ) -> IntegrationInstallation:
+    ) -> MarketplaceIntegrationInstallation:
         """Install integration for a user"""
         try:
             integration = self.db.query(Integration).filter(
@@ -328,11 +328,11 @@ class IntegrationMarketplaceService:
                 raise ValueError("Integration is not available for installation")
             
             # Check if already installed
-            existing_installation = self.db.query(IntegrationInstallation).filter(
+            existing_installation = self.db.query(MarketplaceIntegrationInstallation).filter(
                 and_(
-                    IntegrationInstallation.integration_id == integration_id,
-                    IntegrationInstallation.user_id == user_id,
-                    IntegrationInstallation.workspace_id == workspace_id
+                    MarketplaceIntegrationInstallation.integration_id == integration_id,
+                    MarketplaceIntegrationInstallation.user_id == user_id,
+                    MarketplaceIntegrationInstallation.workspace_id == workspace_id
                 )
             ).first()
             
@@ -340,7 +340,7 @@ class IntegrationMarketplaceService:
                 raise ValueError("Integration already installed")
             
             # Create installation
-            installation = IntegrationInstallation(
+            installation = MarketplaceIntegrationInstallation(
                 integration_id=integration_id,
                 user_id=user_id,
                 workspace_id=workspace_id,
@@ -385,10 +385,10 @@ class IntegrationMarketplaceService:
     ) -> bool:
         """Uninstall integration for a user"""
         try:
-            installation = self.db.query(IntegrationInstallation).filter(
+            installation = self.db.query(MarketplaceIntegrationInstallation).filter(
                 and_(
-                    IntegrationInstallation.id == installation_id,
-                    IntegrationInstallation.user_id == user_id
+                    MarketplaceIntegrationInstallation.id == installation_id,
+                    MarketplaceIntegrationInstallation.user_id == user_id
                 )
             ).first()
             
@@ -700,7 +700,7 @@ class IntegrationMarketplaceService:
         self, 
         integration: Integration, 
         user_id: str, 
-        installation: IntegrationInstallation
+        installation: MarketplaceIntegrationInstallation
     ) -> str:
         """Create Stripe subscription for paid integration"""
         try:
@@ -741,10 +741,10 @@ class IntegrationMarketplaceService:
         except Exception as e:
             logger.error(f"Error cancelling subscription: {str(e)}")
 
-    def _send_installation_webhook(
+    async def _send_installation_webhook(
         self, 
         integration: Integration, 
-        installation: IntegrationInstallation, 
+        installation: MarketplaceIntegrationInstallation, 
         event_type: str,
         background_tasks = None
     ):
@@ -775,24 +775,64 @@ class IntegrationMarketplaceService:
             
             # Send webhook in background using async implementation
             if background_tasks:
-                background_tasks.add_task(self._deliver_webhook, webhook, integration.webhook_url)
+                background_tasks.add_task(self._webhook_safe_wrapper, webhook.id, integration.webhook_url)
             else:
                 # Use asyncio for non-blocking delivery when no background_tasks available
-                import asyncio
-                asyncio.create_task(self._deliver_webhook(webhook, integration.webhook_url))
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(self._safe_deliver_webhook(webhook, integration.webhook_url))
+                except RuntimeError:
+                    # No running event loop, log and skip webhook delivery
+                    logger.warning(f"No running event loop for webhook delivery, skipping webhook for integration {integration.id}")
             
         except Exception as e:
             logger.error(f"Error sending installation webhook: {str(e)}")
 
-    async def _deliver_webhook(self, webhook: IntegrationWebhook, webhook_url: str):
-        """Deliver webhook to integration endpoint"""
+    async def _webhook_safe_wrapper(self, webhook_id: int, webhook_url: str):
+        """Wrapper for background webhook delivery with its own DB session"""
+        from app.database import SessionLocal
+        
+        db = SessionLocal()
+        try:
+            # Re-fetch webhook to ensure we have a fresh DB session
+            webhook = db.query(IntegrationWebhook).filter(IntegrationWebhook.id == webhook_id).first()
+            if not webhook:
+                logger.error("Webhook record not found during delivery")
+                return
+                
+            await self._deliver_webhook_with_session(webhook, webhook_url, db)
+        except Exception as e:
+            logger.error(f"Error in webhook safe wrapper: {str(e)}")
+        finally:
+            db.close()
+
+    async def _safe_deliver_webhook(self, webhook: IntegrationWebhook, webhook_url: str):
+        """Safely deliver webhook with its own DB session and error handling"""
+        from app.database import SessionLocal
+        
+        db = SessionLocal()
+        try:
+            # Re-fetch webhook to ensure we have a fresh DB session
+            webhook = db.query(IntegrationWebhook).filter(IntegrationWebhook.id == webhook.id).first()
+            if not webhook:
+                logger.error("Webhook record not found during delivery")
+                return
+                
+            await self._deliver_webhook_with_session(webhook, webhook_url, db)
+        except Exception as e:
+            logger.error(f"Error in safe webhook delivery: {str(e)}")
+        finally:
+            db.close()
+
+    async def _deliver_webhook_with_session(self, webhook: IntegrationWebhook, webhook_url: str, db_session):
+        """Deliver webhook with provided DB session"""
         try:
             if not requests:
                 # Mock webhook delivery
                 webhook.status = "completed"
                 webhook.response_status_code = 200
                 webhook.processed_at = datetime.utcnow()
-                self.db.commit()
+                db_session.commit()
                 return
                 
             response = requests.post(
@@ -808,16 +848,15 @@ class IntegrationMarketplaceService:
             webhook.response_body = response.text[:1000]  # Truncate
             webhook.processed_at = datetime.utcnow()
             
-            self.db.commit()
+            db_session.commit()
             
         except Exception as e:
             webhook.status = "failed"
             webhook.error_message = str(e)
             webhook.processed_at = datetime.utcnow()
-            self.db.commit()
+            db_session.commit()
             
             logger.error(f"Error delivering webhook: {str(e)}")
-
 
 
     async def _generate_search_facets(

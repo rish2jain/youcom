@@ -1,7 +1,7 @@
 """Predictive analytics service for competitive intelligence"""
 import logging
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 import statistics
@@ -30,7 +30,7 @@ class PredictiveAnalyticsService:
 
         try:
             # Get historical impact cards
-            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
             
             impact_cards_query = await db.execute(
                 select(ImpactCard).where(
@@ -101,7 +101,7 @@ class PredictiveAnalyticsService:
             return {"status": "error", "error": "Database session required"}
 
         try:
-            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
             
             # Get all impact cards in period
             impact_cards_query = await db.execute(
@@ -197,7 +197,7 @@ class PredictiveAnalyticsService:
             return {"status": "error", "error": "Database session required"}
 
         try:
-            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
             
             # Get API call logs
             api_logs_query = await db.execute(

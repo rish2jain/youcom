@@ -105,10 +105,10 @@ class IntegrationDeveloper(Base):
     last_active = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
-    integrations = relationship("Integration", back_populates="developer")
+    integrations = relationship("MarketplaceIntegration", back_populates="developer")
 
 
-class Integration(Base):
+class MarketplaceIntegration(Base):
     """Third-party integrations in the marketplace"""
     __tablename__ = "marketplace_integrations"
 
@@ -177,11 +177,11 @@ class Integration(Base):
     
     # Relationships
     developer = relationship("IntegrationDeveloper", back_populates="integrations")
-    installations = relationship("IntegrationInstallation", back_populates="integration")
+    installations = relationship("MarketplaceIntegrationInstallation", back_populates="integration")
     reviews = relationship("IntegrationReview", back_populates="integration")
 
 
-class IntegrationInstallation(Base):
+class MarketplaceIntegrationInstallation(Base):
     """User installations of integrations"""
     __tablename__ = "marketplace_integration_installations"
 
@@ -213,7 +213,7 @@ class IntegrationInstallation(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    integration = relationship("Integration", back_populates="installations")
+    integration = relationship("MarketplaceIntegration", back_populates="installations")
 
 
 class IntegrationReview(Base):
@@ -246,7 +246,7 @@ class IntegrationReview(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    integration = relationship("Integration", back_populates="reviews")
+    integration = relationship("MarketplaceIntegration", back_populates="reviews")
 
 
 class IntegrationWebhook(Base):

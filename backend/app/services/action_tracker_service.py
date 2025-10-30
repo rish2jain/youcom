@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, desc, func
+from sqlalchemy import and_, desc, func, update
 
 from ..models.action_tracker import (
     ActionItem, ActionReminder, ActionBoard, ActionBoardItem, ActionTemplate,
@@ -501,8 +501,13 @@ class ActionTrackerService:
             self.db.add(action)
             actions.append(action)
         
-        # Update template usage
-        template.usage_count += 1
+        # Update template usage atomically
+        if template is not None:
+            self.db.execute(
+                update(ActionTemplate)
+                .where(ActionTemplate.id == template.id)
+                .values(usage_count=ActionTemplate.usage_count + 1)
+            )
         
         self.db.commit()
         for action in actions:

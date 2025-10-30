@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
+import { MLFeedbackPanel } from "./MLFeedbackPanel";
 
 interface ImpactCard {
   id: number;
@@ -108,7 +109,13 @@ export function ImpactCardDisplay() {
   const competitorRef = useRef<string | null>(null);
   const [credibilityFilter, setCredibilityFilter] = useState(0);
   const [showExplainability, setShowExplainability] = useState(false);
-  const [comparisonData, setComparisonData] = useState<Array<{ created_at: string | null; risk_score: number; credibility_score: number }>>([]);
+  const [comparisonData, setComparisonData] = useState<
+    Array<{
+      created_at: string | null;
+      risk_score: number;
+      credibility_score: number;
+    }>
+  >([]);
   const [comparisonLoading, setComparisonLoading] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
@@ -116,7 +123,8 @@ export function ImpactCardDisplay() {
 
   const normalizedPlan = useMemo(() => {
     if (!selectedCard) return [] as RankedAction[];
-    const plan = selectedCard.next_steps_plan ?? selectedCard.recommended_actions ?? [];
+    const plan =
+      selectedCard.next_steps_plan ?? selectedCard.recommended_actions ?? [];
     return plan.map((action, idx) => ({
       ...action,
       owner: action.owner ?? "Strategy Team",
@@ -124,7 +132,8 @@ export function ImpactCardDisplay() {
       impact_score: action.impact_score ?? 60,
       effort_score: action.effort_score ?? 60,
       score:
-        action.score ?? (action.impact_score ?? 60) - ((action.effort_score ?? 60) / 2),
+        action.score ??
+        (action.impact_score ?? 60) - (action.effort_score ?? 60) / 2,
       evidence: action.evidence ?? [],
       index: action.index ?? idx,
     }));
@@ -150,7 +159,8 @@ export function ImpactCardDisplay() {
 
   const { data: notificationLogs } = useQuery({
     queryKey: ["notificationLogs"],
-    queryFn: () => api.get("/api/v1/notifications/logs").then((res) => res.data.items),
+    queryFn: () =>
+      api.get("/api/v1/notifications/logs").then((res) => res.data.items),
     staleTime: 60_000,
   });
 
@@ -232,7 +242,10 @@ export function ImpactCardDisplay() {
     const socket = getSocket();
     socket.emit("join_room", { room: "impact_cards" });
 
-    const resolveStepMessage = (step: string, payload: Record<string, unknown>) => {
+    const resolveStepMessage = (
+      step: string,
+      payload: Record<string, unknown>
+    ) => {
       switch (step) {
         case "news":
           return `News ingested (${payload.articles ?? 0} articles)`;
@@ -269,12 +282,15 @@ export function ImpactCardDisplay() {
 
       const message = resolveStepMessage(payload.step, payload);
       setProgressLog((prev) =>
-        [...prev, {
-          status: "step" as const,
-          message,
-          timestamp: new Date().toISOString(),
-          competitor,
-        }].slice(-6)
+        [
+          ...prev,
+          {
+            status: "step" as const,
+            message,
+            timestamp: new Date().toISOString(),
+            competitor,
+          },
+        ].slice(-6)
       );
     };
 
@@ -494,12 +510,14 @@ export function ImpactCardDisplay() {
           </h5>
           <ul className="space-y-1 text-sm text-blue-700">
             {progressLog.map((entry, index) => (
-              <li key={`${entry.timestamp}-${index}`} className="flex items-start">
+              <li
+                key={`${entry.timestamp}-${index}`}
+                className="flex items-start"
+              >
                 <span className="mr-2 text-blue-500">•</span>
                 <span>
-                  <span className="font-medium capitalize">{entry.status}</span> —
-                  {" "}
-                  {entry.message}
+                  <span className="font-medium capitalize">{entry.status}</span>{" "}
+                  — {entry.message}
                   <span className="ml-2 text-xs text-blue-400">
                     {new Date(entry.timestamp).toLocaleTimeString()}
                   </span>
@@ -549,80 +567,80 @@ export function ImpactCardDisplay() {
             {impactErrorMessage}
           </div>
         )}
-        {impactCards && impactCards.length > 0 ? (
-          impactCards.slice(0, 3).map((card: ImpactCard) => (
-            <div
-              key={card.id}
-              onClick={() => setSelectedCard(card)}
-              className="p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h4 className="font-medium text-gray-900">
-                    {card.competitor_name}
-                  </h4>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${getRiskColor(
-                        card.risk_level
-                      )}`}
+        {impactCards && impactCards.length > 0
+          ? impactCards.slice(0, 3).map((card: ImpactCard) => (
+              <div
+                key={card.id}
+                onClick={() => setSelectedCard(card)}
+                className="p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h4 className="font-medium text-gray-900">
+                      {card.competitor_name}
+                    </h4>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${getRiskColor(
+                          card.risk_level
+                        )}`}
+                      >
+                        {card.risk_level.toUpperCase()} RISK
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        Score: {card.risk_score}/100
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div
+                      className="text-2xl font-bold"
+                      style={{ color: getRiskGaugeColor(card.risk_score) }}
                     >
-                      {card.risk_level.toUpperCase()} RISK
-                    </span>
-                    <span className="text-sm text-gray-600">
-                      Score: {card.risk_score}/100
-                    </span>
+                      {card.risk_score}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {card.total_sources} sources
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Credibility: {(card.credibility_score * 100).toFixed(0)}%
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div
-                    className="text-2xl font-bold"
-                    style={{ color: getRiskGaugeColor(card.risk_score) }}
-                  >
-                    {card.risk_score}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {card.total_sources} sources
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Credibility: {(card.credibility_score * 100).toFixed(0)}%
-                  </div>
+
+                <div className="text-sm text-gray-600 mb-2">
+                  <Clock className="w-3 h-3 inline mr-1" />
+                  {new Date(card.created_at).toLocaleString()}
                 </div>
+
+                {card.requires_review && (
+                  <div className="mb-2 inline-flex items-center space-x-2 rounded-full bg-red-50 px-3 py-1 text-xs text-red-600">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Analyst review requested</span>
+                  </div>
+                )}
+
+                {card.key_insights.length > 0 && (
+                  <div className="text-sm text-gray-700">
+                    <strong>Key Insight:</strong> {card.key_insights[0]}
+                  </div>
+                )}
               </div>
-
-              <div className="text-sm text-gray-600 mb-2">
-                <Clock className="w-3 h-3 inline mr-1" />
-                {new Date(card.created_at).toLocaleString()}
+            ))
+          : !impactErrorMessage && (
+              <div className="text-center py-8 text-gray-500">
+                <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p>No Impact Cards generated yet.</p>
+                <p className="text-sm">
+                  Generate your first Impact Card to see You.com APIs in action!
+                </p>
               </div>
-
-              {card.requires_review && (
-                <div className="mb-2 inline-flex items-center space-x-2 rounded-full bg-red-50 px-3 py-1 text-xs text-red-600">
-                  <AlertTriangle className="w-3 h-3" />
-                  <span>Analyst review requested</span>
-                </div>
-              )}
-
-              {card.key_insights.length > 0 && (
-                <div className="text-sm text-gray-700">
-                  <strong>Key Insight:</strong> {card.key_insights[0]}
-                </div>
-              )}
-            </div>
-          ))
-        ) : (!impactErrorMessage && (
-          <div className="text-center py-8 text-gray-500">
-            <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p>No Impact Cards generated yet.</p>
-            <p className="text-sm">
-              Generate your first Impact Card to see You.com APIs in action!
-            </p>
-          </div>
-        ))}
+            )}
       </div>
 
       {/* Selected Card Detail */}
-  {selectedCard && (
-    <div className="border-t pt-6">
+      {selectedCard && (
+        <div className="border-t pt-6">
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-xl font-bold text-gray-900">
               {selectedCard.competitor_name} - Impact Analysis
@@ -706,60 +724,89 @@ export function ImpactCardDisplay() {
           {selectedCard.source_quality && (
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 border border-gray-200 rounded-lg">
-                <h5 className="font-semibold text-gray-900 mb-2">Credibility Overview</h5>
+                <h5 className="font-semibold text-gray-900 mb-2">
+                  Credibility Overview
+                </h5>
                 <p className="text-sm text-gray-600">
-                  Overall score: {Math.round(selectedCard.credibility_score * 100)}%
+                  Overall score:{" "}
+                  {Math.round(selectedCard.credibility_score * 100)}%
                 </p>
                 <ul className="mt-2 text-sm text-gray-600 space-y-1">
-                  <li>Tier 1 sources: {selectedCard.source_quality.tiers?.tier1 ?? 0}</li>
-                  <li>Tier 2 sources: {selectedCard.source_quality.tiers?.tier2 ?? 0}</li>
-                  <li>Tier 3 sources: {selectedCard.source_quality.tiers?.tier3 ?? 0}</li>
+                  <li>
+                    Tier 1 sources:{" "}
+                    {selectedCard.source_quality.tiers?.tier1 ?? 0}
+                  </li>
+                  <li>
+                    Tier 2 sources:{" "}
+                    {selectedCard.source_quality.tiers?.tier2 ?? 0}
+                  </li>
+                  <li>
+                    Tier 3 sources:{" "}
+                    {selectedCard.source_quality.tiers?.tier3 ?? 0}
+                  </li>
                 </ul>
               </div>
               <div className="p-4 border border-gray-200 rounded-lg">
-                <h5 className="font-semibold text-gray-900 mb-2">Top Evidence</h5>
+                <h5 className="font-semibold text-gray-900 mb-2">
+                  Top Evidence
+                </h5>
                 <ul className="space-y-1 text-sm text-blue-600">
-                  {selectedCard.source_quality.top_sources?.slice(0, 3).map((source, idx) => (
-                    <li key={`${source.url}-${idx}`}>
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:underline"
-                      >
-                        {source.title ?? source.url}
-                      </a>
-                    </li>
-                  ))}
+                  {selectedCard.source_quality.top_sources
+                    ?.slice(0, 3)
+                    .map((source, idx) => (
+                      <li key={`${source.url}-${idx}`}>
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:underline"
+                        >
+                          {source.title ?? source.url}
+                        </a>
+                      </li>
+                    ))}
                   {(!selectedCard.source_quality.top_sources ||
                     selectedCard.source_quality.top_sources.length === 0) && (
                     <li className="text-gray-500">No evidence captured.</li>
                   )}
                 </ul>
               </div>
-    </div>
-  )}
+            </div>
+          )}
 
-  <div className="mt-8">
-    <h5 className="text-sm font-semibold text-gray-900 mb-2">Latest Notifications</h5>
-    <div className="space-y-2 text-sm text-gray-600">
-      {(notificationLogs ?? []).slice(0, 5).map((log: any) => (
-        <div key={log.id} className="p-3 border border-gray-200 rounded-lg">
-          <div className="flex justify-between">
-            <span className="font-medium text-gray-800">{log.competitor_name}</span>
-            <span className="text-xs text-gray-500">
-              {log.created_at ? new Date(log.created_at).toLocaleString() : ""}
-            </span>
+          <div className="mt-8">
+            <h5 className="text-sm font-semibold text-gray-900 mb-2">
+              Latest Notifications
+            </h5>
+            <div className="space-y-2 text-sm text-gray-600">
+              {(notificationLogs ?? []).slice(0, 5).map((log: any) => (
+                <div
+                  key={log.id}
+                  className="p-3 border border-gray-200 rounded-lg"
+                >
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-800">
+                      {log.competitor_name}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {log.created_at
+                        ? new Date(log.created_at).toLocaleString()
+                        : ""}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Channel: {log.channel}
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">{log.message}</p>
+                </div>
+              ))}
+              {(!notificationLogs || notificationLogs.length === 0) && (
+                <div className="text-xs text-gray-500">
+                  No alerts have been triggered yet.
+                </div>
+              )}
+            </div>
           </div>
-          <div className="text-xs text-gray-500">Channel: {log.channel}</div>
-          <p className="text-sm text-gray-600 mt-1">{log.message}</p>
-        </div>
-      ))}
-      {(!notificationLogs || notificationLogs.length === 0) && (
-        <div className="text-xs text-gray-500">No alerts have been triggered yet.</div>
-      )}
-    </div>
-  </div>
 
           {/* Impact Areas */}
           {selectedCard.impact_areas.length > 0 && (
@@ -799,10 +846,15 @@ export function ImpactCardDisplay() {
             <h5 className="font-semibold text-gray-900 mb-3">Next Steps</h5>
             <div className="space-y-3">
               {normalizedPlan.map((action) => (
-                <div key={action.index} className="p-4 border border-gray-200 rounded-lg">
+                <div
+                  key={action.index}
+                  className="p-4 border border-gray-200 rounded-lg"
+                >
                   <div className="flex justify-between items-center mb-2">
                     <div>
-                      <p className="font-medium text-gray-900">{action.action}</p>
+                      <p className="font-medium text-gray-900">
+                        {action.action}
+                      </p>
                       <p className="text-xs text-gray-500">
                         Owner: {action.owner} · OKR: {action.okr_goal}
                       </p>
@@ -854,7 +906,9 @@ export function ImpactCardDisplay() {
               ))}
             </div>
             {feedbackMessage && (
-              <div className="mt-2 text-xs text-blue-600">{feedbackMessage}</div>
+              <div className="mt-2 text-xs text-blue-600">
+                {feedbackMessage}
+              </div>
             )}
           </div>
 
@@ -864,26 +918,35 @@ export function ImpactCardDisplay() {
               className="flex items-center space-x-2 text-sm text-blue-600 hover:underline"
             >
               <Zap className="w-4 h-4" />
-              <span>{showExplainability ? "Hide" : "Show"} Explainability Deep Dive</span>
+              <span>
+                {showExplainability ? "Hide" : "Show"} Explainability Deep Dive
+              </span>
             </button>
             {showExplainability && selectedCard.explainability && (
               <div className="mt-3 p-4 bg-gray-50 rounded-lg text-sm text-gray-700 space-y-2">
                 {selectedCard.explainability.reasoning && (
                   <p>
-                    <strong>Model reasoning:</strong> {selectedCard.explainability.reasoning}
+                    <strong>Model reasoning:</strong>{" "}
+                    {selectedCard.explainability.reasoning}
                   </p>
                 )}
                 <div>
                   <strong>Drivers:</strong>
                   <ul className="list-disc list-inside">
-                    {selectedCard.explainability.impact_areas?.map((area, idx) => (
-                      <li key={idx}>{area.area}: {area.description}</li>
-                    ))}
+                    {selectedCard.explainability.impact_areas?.map(
+                      (area, idx) => (
+                        <li key={idx}>
+                          {area.area}: {area.description}
+                        </li>
+                      )
+                    )}
                   </ul>
                 </div>
                 {selectedCard.source_quality && (
                   <div>
-                    <strong>Source summary:</strong> {selectedCard.source_quality.total} references · credibility {Math.round(selectedCard.credibility_score * 100)}%
+                    <strong>Source summary:</strong>{" "}
+                    {selectedCard.source_quality.total} references · credibility{" "}
+                    {Math.round(selectedCard.credibility_score * 100)}%
                   </div>
                 )}
               </div>
@@ -891,7 +954,9 @@ export function ImpactCardDisplay() {
           </div>
 
           <div className="mb-6">
-            <h5 className="font-semibold text-gray-900 mb-3">Competitor Trend</h5>
+            <h5 className="font-semibold text-gray-900 mb-3">
+              Competitor Trend
+            </h5>
             {comparisonLoading ? (
               <div className="text-sm text-gray-500">Loading trend…</div>
             ) : comparisonData.length > 0 ? (
@@ -903,21 +968,45 @@ export function ImpactCardDisplay() {
                         ? new Date(point.created_at).toLocaleString()
                         : "Unknown",
                       risk: point.risk_score,
-                      credibility: Math.round(point.credibility_score * 100) / 100,
+                      credibility:
+                        Math.round(point.credibility_score * 100) / 100,
                     }))}
                   >
                     <XAxis dataKey="time" hide />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="risk" name="Risk Score" stroke="#2563eb" />
-                    <Line type="monotone" dataKey="credibility" name="Credibility" stroke="#10b981" />
+                    <Line
+                      type="monotone"
+                      dataKey="risk"
+                      name="Risk Score"
+                      stroke="#2563eb"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="credibility"
+                      name="Credibility"
+                      stroke="#10b981"
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="text-sm text-gray-500">No historical impact cards for trend analysis.</div>
+              <div className="text-sm text-gray-500">
+                No historical impact cards for trend analysis.
+              </div>
             )}
+          </div>
+
+          {/* ML Feedback Panel */}
+          <div className="mb-6">
+            <MLFeedbackPanel
+              impactCardId={selectedCard.id}
+              currentRiskScore={selectedCard.risk_score}
+              currentSeverity={selectedCard.risk_level}
+              currentCategory={selectedCard.impact_areas[0]?.area || "general"}
+              currentRelevance={Math.round(selectedCard.confidence_score)}
+            />
           </div>
 
           {/* Key Insights */}
@@ -978,22 +1067,32 @@ export function ImpactCardDisplay() {
       )}
 
       <div className="mt-8">
-        <h5 className="text-sm font-semibold text-gray-900 mb-2">Latest Notifications</h5>
+        <h5 className="text-sm font-semibold text-gray-900 mb-2">
+          Latest Notifications
+        </h5>
         <div className="space-y-2 text-sm text-gray-600">
           {(notificationLogs ?? []).slice(0, 5).map((log: any) => (
             <div key={log.id} className="p-3 border border-gray-200 rounded-lg">
               <div className="flex justify-between">
-                <span className="font-medium text-gray-800">{log.competitor_name}</span>
+                <span className="font-medium text-gray-800">
+                  {log.competitor_name}
+                </span>
                 <span className="text-xs text-gray-500">
-                  {log.created_at ? new Date(log.created_at).toLocaleString() : ""}
+                  {log.created_at
+                    ? new Date(log.created_at).toLocaleString()
+                    : ""}
                 </span>
               </div>
-              <div className="text-xs text-gray-500">Channel: {log.channel}</div>
+              <div className="text-xs text-gray-500">
+                Channel: {log.channel}
+              </div>
               <p className="text-sm text-gray-600 mt-1">{log.message}</p>
             </div>
           ))}
           {(!notificationLogs || notificationLogs.length === 0) && (
-            <div className="text-xs text-gray-500">No alerts have been triggered yet.</div>
+            <div className="text-xs text-gray-500">
+              No alerts have been triggered yet.
+            </div>
           )}
         </div>
       </div>
