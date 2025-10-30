@@ -42,6 +42,8 @@ class ImpactCard(Base):
     
     # Relationships
     watch_item = relationship("WatchItem", backref="impact_cards")
+    timeline_entries = relationship("InsightTimeline", back_populates="impact_card", cascade="all, delete-orphan")
+    action_items = relationship("ActionItem", back_populates="impact_card", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<ImpactCard(id={self.id}, competitor='{self.competitor_name}', risk_score={self.risk_score})>"

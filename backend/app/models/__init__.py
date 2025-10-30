@@ -15,4 +15,24 @@ from .shared_watchlist import SharedWatchlist  # noqa: F401
 from .comment import Comment  # noqa: F401
 from .audit_log import AuditLog, AuditAction  # noqa: F401
 from .dashboard import Dashboard, ScheduledReport  # noqa: F401
-from .integration import Integration, IntegrationLog, IntegrationType  # noqa: F401
+from .integration import Integration, IntegrationUsageLog  # noqa: F401
+
+# Week 4 models - Community Platform
+from .community import (  # noqa: F401
+    CommunityUser, CommunityContribution, CommunityValidation,
+    ExpertNetwork, CommunityChallenge, CommunityInsight,
+    CommunityLeaderboard
+)
+
+# Week 4 models - White-label Solutions
+from .whitelabel import (  # noqa: F401
+    WhiteLabelCustomer, BrandingConfiguration, DeploymentConfiguration,
+    CustomIntegration, WhiteLabelUsage, SupportTicket, WhiteLabelAnalytics
+)
+
+# Week 4 models - Integration Marketplace
+from .integration_marketplace import (  # noqa: F401
+    IntegrationDeveloper, Integration as MarketplaceIntegration, IntegrationInstallation,
+    IntegrationReview, IntegrationWebhook, IntegrationAnalytics,
+    IntegrationPayout, IntegrationSupport, MarketplaceSettings
+)

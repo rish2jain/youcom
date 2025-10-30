@@ -1,8 +1,10 @@
 # Consolidated Design Feedback Document
+
 ## Enterprise Competitive Intelligence Agent (CIA_System)
 
 **Document Version:** 1.0
-**Date:** 2025-10-20
+**Date:** 2025-10-30 (Archived)
+**Original Creation:** 2025-10-20
 **Status:** Design Review - Critical Issues Identified
 
 ---
@@ -14,6 +16,7 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
 **Overall Assessment:** 75% alignment with critical gaps requiring immediate attention.
 
 ### Key Findings
+
 - ✅ **Strong Areas:** Security/RBAC, Core Architecture, API Integration Strategy
 - ⚠️ **Partial Alignment:** Performance SLAs, ML Operations, Data Management
 - ❌ **Critical Gaps:** High-Risk Event Processing, Bulk Operations, ML Monitoring
@@ -23,6 +26,7 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
 ## 1. Requirements Document Feedback Summary
 
 ### 1.1 Overall Strengths
+
 - ✅ Clear user story format following agile best practices
 - ✅ Quantifiable acceptance criteria (85% precision, 80% recall, p95 <500ms)
 - ✅ Comprehensive stakeholder coverage (PM, executives, compliance, admins)
@@ -34,12 +38,14 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
 #### 🔴 **Critical Issues**
 
 **1.2.1 Performance Latency Conflicts**
+
 - **Issue:** Requirements 1 & 2 specify "5 minutes" ingestion + "within 5 minutes" processing = potential 10-minute total latency
 - **Conflicts with:** Introduction claims "<5-minute end-to-end latency"
 - **Impact:** Ambiguous SLA contracts, impossible to test
 - **Resolution Required:** Define explicit end-to-end vs. component-level SLAs
 
 **1.2.2 Missing ML Evaluation Framework**
+
 - **Issue:** Precision 85%, recall 80%, F1 82% targets lack measurement methodology
 - **Missing:**
   - Training/validation datasets
@@ -50,6 +56,7 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
 - **Resolution Required:** Add comprehensive ML evaluation section
 
 **1.2.3 High-Risk Event Processing Incomplete**
+
 - **Issue:** Risk scores 81-100 require special handling but workflow is undefined
 - **Requirements State:** ≥3 sources, ≥2 Tier-1, avg credibility ≥0.80
 - **Missing:**
@@ -62,6 +69,7 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
 #### 🟡 **High Priority Issues**
 
 **1.2.4 Security & Compliance Gaps**
+
 - **Missing Requirements:**
   - Encryption in transit (TLS 1.2+) specifications
   - Key management and rotation policies (AWS KMS)
@@ -72,6 +80,7 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
   - Network security (VPN, firewall, isolation)
 
 **1.2.5 Requirement 7 - Incomplete Specification**
+
 - **Issue:** "Configurable watchlist management" lacks acceptance criteria
 - **Ambiguous:** No definition of CRUD operations, schema, bulk limits, or analytics
 - **Missing:**
@@ -82,6 +91,7 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
   - Prioritization algorithm details
 
 **1.2.6 Operational Requirements Undefined**
+
 - **Missing:**
   - System capacity (concurrent users, throughput)
   - Scalability targets (horizontal scaling strategy)
@@ -92,12 +102,14 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
 #### 🟢 **Medium Priority Issues**
 
 **1.2.7 Ambiguous Specifications**
+
 - **Risk Score Calculation:** No methodology for generating 0-100 scores across dimensions
 - **Source Credibility:** Tier-based scoring defined but evaluation algorithm missing
 - **Explainability:** Vague definition of what constitutes "explainable insights"
 - **Confidence Scores:** Scale undefined (0-1 vs 0-100), calibration method unspecified
 
 **1.2.8 API Performance Concerns**
+
 - **Aggressive Targets:** P95 <500ms, P99 <1000ms for AI-powered analysis with external API calls
 - **Circuit Breaker:** 5 failures → 60s recovery may be too aggressive for external dependencies
 - **Bulk Operations:** No performance or size limitations specified
@@ -108,16 +120,16 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
 
 ### 2.1 Alignment Matrix
 
-| Requirement | Design Coverage | Alignment % | Status |
-|-------------|----------------|-------------|--------|
-| R1: Real-time News Monitoring | Partial | 70% | ⚠️ Missing SLAs, deduplication, multilingual |
-| R2: AI Impact Analysis | Partial | 65% | ⚠️ Missing ML monitoring, drift detection |
-| R3: Explainable Insights | Complete | 85% | ✅ Good card assembly, needs calibration |
-| R4: Compliance & Audit | Partial | 75% | ⚠️ Missing high-risk workflow, encryption details |
-| R5: ARI Deep Research | Complete | 90% | ✅ Strong architecture, clarify SLAs |
-| R6: API Management | Partial | 60% | ⚠️ Missing caching specs, circuit breakers, alerts |
-| R7: Watchlist Management | Incomplete | 50% | ❌ Missing bulk operations, schema, analytics |
-| **Overall Average** | | **75%** | ⚠️ **Significant gaps** |
+| Requirement                   | Design Coverage | Alignment % | Status                                             |
+| ----------------------------- | --------------- | ----------- | -------------------------------------------------- |
+| R1: Real-time News Monitoring | Partial         | 70%         | ⚠️ Missing SLAs, deduplication, multilingual       |
+| R2: AI Impact Analysis        | Partial         | 65%         | ⚠️ Missing ML monitoring, drift detection          |
+| R3: Explainable Insights      | Complete        | 85%         | ✅ Good card assembly, needs calibration           |
+| R4: Compliance & Audit        | Partial         | 75%         | ⚠️ Missing high-risk workflow, encryption details  |
+| R5: ARI Deep Research         | Complete        | 90%         | ✅ Strong architecture, clarify SLAs               |
+| R6: API Management            | Partial         | 60%         | ⚠️ Missing caching specs, circuit breakers, alerts |
+| R7: Watchlist Management      | Incomplete      | 50%         | ❌ Missing bulk operations, schema, analytics      |
+| **Overall Average**           |                 | **75%**     | ⚠️ **Significant gaps**                            |
 
 ### 2.2 Critical Design Gaps
 
@@ -128,6 +140,7 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
 **Design Status:** ❌ Completely missing
 
 **Missing Components:**
+
 1. Source Verifier Agent/Module
 2. Tier-1 source identification logic
 3. Credibility scoring computation algorithm
@@ -138,6 +151,7 @@ This document consolidates expert feedback from multiple AI models (GPT-5, Claud
 **Impact:** High compliance risk, potential false intelligence dissemination
 
 **Recommendation:**
+
 ```yaml
 # Add to orchestration/agents.yaml
 agents:
@@ -158,6 +172,7 @@ agents:
 ```
 
 **Architecture Addition:**
+
 - Add SourceVerifier between Impact Extractor and Card Assembler
 - Integrate with Rules Engine for automated enforcement
 - Add admin UI for manual verification workflow
@@ -171,6 +186,7 @@ agents:
 **Design Status:** ❌ Missing model monitoring and retraining infrastructure
 
 **Missing Components:**
+
 1. Model versioning system
 2. Drift detection pipeline (PSI/KS tests)
 3. Performance metrics dashboard
@@ -181,6 +197,7 @@ agents:
 **Impact:** Unverifiable ML quality, model degradation over time
 
 **Recommendation:**
+
 ```yaml
 # Add MLOps section to design
 ml_operations:
@@ -208,6 +225,7 @@ ml_operations:
 ```
 
 **Architecture Addition:**
+
 - Add ML Monitoring Service (separate microservice)
 - Integrate with Celery for scheduled drift checks
 - Add Prometheus metrics for model performance
@@ -222,6 +240,7 @@ ml_operations:
 **Design Status:** ❌ No bulk processing design
 
 **Missing Components:**
+
 1. Bulk API endpoints (POST /watchlists/bulk)
 2. Batch processing workflow (Celery tasks)
 3. Performance targets (e.g., 10,000 items in <30s)
@@ -232,6 +251,7 @@ ml_operations:
 **Impact:** Poor user experience for enterprise customers managing 100+ watchlist items
 
 **Recommendation:**
+
 ```yaml
 # Add to backend API design
 bulk_operations:
@@ -255,6 +275,7 @@ bulk_operations:
 ```
 
 **Architecture Addition:**
+
 - Add BulkProcessor service using Celery
 - Implement async task status endpoints
 - Add UI for upload/download with progress bars
@@ -264,6 +285,7 @@ bulk_operations:
 #### ⚠️ **Gap 4: Circuit Breaker & Caching Implementation (All Experts Noted)**
 
 **Requirement:**
+
 - Circuit breaker: 5 failures → 60s recovery
 - Caching: News 15min, Search 1hr, ARI 7 days
 - Graceful degradation with "Last updated X minutes ago"
@@ -271,6 +293,7 @@ bulk_operations:
 **Design Status:** ⚠️ Conceptually mentioned, implementation details missing
 
 **Missing Specifications:**
+
 1. Circuit breaker library/implementation (PyCircuit, resilience4j)
 2. Per-integration granularity (News, Search, Custom Agents, ARI)
 3. Half-open state behavior
@@ -279,6 +302,7 @@ bulk_operations:
 6. Cache consistency guarantees
 
 **Recommendation:**
+
 ```python
 # Add to backend/core/resilience.py
 from circuitbreaker import circuit
@@ -297,6 +321,7 @@ cache_policies = {
 ```
 
 **Architecture Addition:**
+
 - Add Resilience Layer diagram with circuit breaker states
 - Specify Redis cache configuration
 - Define graceful degradation UI states per component
@@ -310,6 +335,7 @@ cache_policies = {
 **Design Status:** ⚠️ Overview mentions targets, no operational design
 
 **Missing Components:**
+
 1. SLO definitions per capability (ingestion, analysis, reporting)
 2. Error budgets and alerting policies
 3. OpenTelemetry trace context schema
@@ -318,6 +344,7 @@ cache_policies = {
 6. Auto-throttling behavior at 80% quota
 
 **Recommendation:**
+
 ```yaml
 # Add observability section
 observability:
@@ -354,18 +381,21 @@ observability:
 **What's Working Well:**
 
 1. **Security & RBAC (85% aligned)**
+
    - Three-tier permission model (viewer/analyst/admin) matches requirements
    - YAML-based role definitions with inheritance
    - SOC 2 control alignment documented
    - **Gap:** Missing encryption specs (TLS, KMS)
 
 2. **Core Architecture (80% aligned)**
+
    - News Ingestion → Entity Enrichment → Impact Extraction → Card Assembly pipeline
    - You.com API integrations (News, Search, ARI) properly modeled
    - Agent orchestration strategy supports deep research
    - **Gap:** Missing scalability and failover design
 
 3. **Data Models (85% aligned)**
+
    - News_Item, Entity, Impact_Card schemas support requirements
    - Provenance tracking implied through data flow
    - **Gap:** Missing Watch_Item schema, credibility score storage
@@ -382,6 +412,7 @@ observability:
 ### 🔴 **Critical (Block Launch)**
 
 #### 1. Implement High-Risk Event Processing Logic
+
 - **Owner:** Backend Team + ML Team
 - **Effort:** 2 sprints
 - **Deliverables:**
@@ -393,6 +424,7 @@ observability:
   - Compliance audit trail integration
 
 #### 2. Resolve Performance SLA Conflicts
+
 - **Owner:** Product + Engineering
 - **Effort:** 1 week (documentation + validation)
 - **Deliverables:**
@@ -404,6 +436,7 @@ observability:
   - Acceptance test suite for latency
 
 #### 3. Add ML Monitoring Infrastructure
+
 - **Owner:** ML/MLOps Team
 - **Effort:** 3 sprints
 - **Deliverables:**
@@ -419,6 +452,7 @@ observability:
 ### 🟡 **High Priority (Next Sprint)**
 
 #### 4. Complete Requirement 7 - Watchlist Management
+
 - **Owner:** Backend + Frontend Teams
 - **Effort:** 2 sprints
 - **Deliverables:**
@@ -430,6 +464,7 @@ observability:
   - Admin UI for watchlist management
 
 #### 5. Implement Circuit Breakers & Caching
+
 - **Owner:** Backend Team
 - **Effort:** 1.5 sprints
 - **Deliverables:**
@@ -440,6 +475,7 @@ observability:
   - Retry logic with exponential backoff
 
 #### 6. Add Security Compliance Details
+
 - **Owner:** Security + Compliance Teams
 - **Effort:** 2 sprints
 - **Deliverables:**
@@ -456,6 +492,7 @@ observability:
 ### 🟢 **Medium Priority (Backlog)**
 
 #### 7. Enhance Observability
+
 - **Owner:** DevOps + Backend
 - **Effort:** 2 sprints
 - **Deliverables:**
@@ -466,6 +503,7 @@ observability:
   - Log aggregation (CloudWatch or ELK)
 
 #### 8. Add Scalability Architecture
+
 - **Owner:** Architecture Team
 - **Effort:** 1 sprint (design)
 - **Deliverables:**
@@ -476,6 +514,7 @@ observability:
   - RTO/RPO definitions (<4 hours / <1 hour)
 
 #### 9. Multilingual & Internationalization
+
 - **Owner:** Backend + ML Teams
 - **Effort:** 2 sprints
 - **Deliverables:**
@@ -490,34 +529,35 @@ observability:
 
 ### 4.1 Requirements → Design Components
 
-| Requirement | Design Component | Status | Notes |
-|-------------|-----------------|--------|-------|
-| R1: News Ingestion (<5 min) | News Ingestor Agent | ⚠️ Partial | Missing SLA enforcement, dedup |
-| R1: 99.9% Availability | Infrastructure (overview) | ⚠️ Partial | Missing HA/DR details |
-| R1: Provenance Tracking | Data Flow (News → Card) | ✅ Complete | Implicit in pipeline |
-| R1: Credibility Tiers | *Missing* | ❌ Gap | Need Credibility Scorer |
-| R2: AI Impact Analysis | Impact Extractor Agent | ✅ Complete | Uses Custom Agents |
-| R2: Risk_Score (0-100) | Data Models: Impact_Card | ✅ Complete | Schema supports it |
-| R2: Precision/Recall/F1 | *Missing* | ❌ Gap | Need ML Monitoring |
-| R3: Explainable Insights | Card Assembler + Rules | ✅ Complete | Good coverage |
-| R3: Confidence Scores | Impact_Card schema | ⚠️ Partial | Missing calibration |
-| R3: Recommended Actions | Rules Engine | ✅ Complete | YAML-based rules |
-| R4: RBAC (3 roles) | Security: RBAC | ✅ Complete | Well-defined |
-| R4: AES-256 Encryption | *Missing* | ❌ Gap | Need infrastructure specs |
-| R4: S3 Object Lock Audits | *Mentioned* | ⚠️ Partial | Need audit pipeline |
-| R4: High-Risk Verification | *Missing* | ❌ Gap | Need SourceVerifier |
-| R5: ARI Reports (2 min) | ARI Reporter Agent | ✅ Complete | Strong design |
-| R5: 400+ Sources | You.com APIs | ✅ Complete | Integrated |
-| R5: Caching (7 days) | *Missing* | ❌ Gap | Need cache specs |
-| R6: Circuit Breaker | *Conceptual* | ⚠️ Partial | Need implementation |
-| R6: Caching (15min/1hr/7d) | *Missing* | ❌ Gap | Need Redis config |
-| R6: 80% Quota Alerts | *Missing* | ❌ Gap | Need monitoring |
-| R6: P95/P99 Latency | Overview mentions | ⚠️ Partial | Need instrumentation |
-| R7: Watchlist CRUD | Backend API Layer | ⚠️ Partial | Missing schema |
-| R7: Bulk Import/Export | *Missing* | ❌ Gap | Need BulkProcessor |
-| R7: Analytics | *Missing* | ❌ Gap | Need definitions |
+| Requirement                 | Design Component          | Status      | Notes                          |
+| --------------------------- | ------------------------- | ----------- | ------------------------------ |
+| R1: News Ingestion (<5 min) | News Ingestor Agent       | ⚠️ Partial  | Missing SLA enforcement, dedup |
+| R1: 99.9% Availability      | Infrastructure (overview) | ⚠️ Partial  | Missing HA/DR details          |
+| R1: Provenance Tracking     | Data Flow (News → Card)   | ✅ Complete | Implicit in pipeline           |
+| R1: Credibility Tiers       | _Missing_                 | ❌ Gap      | Need Credibility Scorer        |
+| R2: AI Impact Analysis      | Impact Extractor Agent    | ✅ Complete | Uses Custom Agents             |
+| R2: Risk_Score (0-100)      | Data Models: Impact_Card  | ✅ Complete | Schema supports it             |
+| R2: Precision/Recall/F1     | _Missing_                 | ❌ Gap      | Need ML Monitoring             |
+| R3: Explainable Insights    | Card Assembler + Rules    | ✅ Complete | Good coverage                  |
+| R3: Confidence Scores       | Impact_Card schema        | ⚠️ Partial  | Missing calibration            |
+| R3: Recommended Actions     | Rules Engine              | ✅ Complete | YAML-based rules               |
+| R4: RBAC (3 roles)          | Security: RBAC            | ✅ Complete | Well-defined                   |
+| R4: AES-256 Encryption      | _Missing_                 | ❌ Gap      | Need infrastructure specs      |
+| R4: S3 Object Lock Audits   | _Mentioned_               | ⚠️ Partial  | Need audit pipeline            |
+| R4: High-Risk Verification  | _Missing_                 | ❌ Gap      | Need SourceVerifier            |
+| R5: ARI Reports (2 min)     | ARI Reporter Agent        | ✅ Complete | Strong design                  |
+| R5: 400+ Sources            | You.com APIs              | ✅ Complete | Integrated                     |
+| R5: Caching (7 days)        | _Missing_                 | ❌ Gap      | Need cache specs               |
+| R6: Circuit Breaker         | _Conceptual_              | ⚠️ Partial  | Need implementation            |
+| R6: Caching (15min/1hr/7d)  | _Missing_                 | ❌ Gap      | Need Redis config              |
+| R6: 80% Quota Alerts        | _Missing_                 | ❌ Gap      | Need monitoring                |
+| R6: P95/P99 Latency         | Overview mentions         | ⚠️ Partial  | Need instrumentation           |
+| R7: Watchlist CRUD          | Backend API Layer         | ⚠️ Partial  | Missing schema                 |
+| R7: Bulk Import/Export      | _Missing_                 | ❌ Gap      | Need BulkProcessor             |
+| R7: Analytics               | _Missing_                 | ❌ Gap      | Need definitions               |
 
 **Summary:**
+
 - ✅ **Complete:** 8/23 (35%)
 - ⚠️ **Partial:** 9/23 (39%)
 - ❌ **Missing:** 6/23 (26%)
@@ -544,21 +584,25 @@ observability:
 ### 5.3 Model-Specific Insights
 
 #### GPT-5 Thinking
+
 - **Strength:** Most comprehensive operational focus (key rotation, half-open circuit breakers)
 - **Unique Contributions:** OpenTelemetry schema design, traceability matrix
 - **Style:** Highly structured with YAML examples
 
 #### Claude Sonnet 4
+
 - **Strength:** Best at holistic quality assessment (75% alignment score)
 - **Unique Contributions:** Priority-ranked recommendations, testability analysis
 - **Style:** Executive-friendly with clear action items
 
 #### Gemini 2.5 Pro
+
 - **Strength:** Most focused on actionability (added SHOULD/MUST priorities)
 - **Unique Contributions:** Flagged missing alerting mechanism in R6
 - **Style:** Concise with concrete next steps
 
 #### Grok-4
+
 - **Strength:** Best alignment with enterprise standards (IEEE, SOC 2)
 - **Unique Contributions:** Integration with You.com API limits, config management ties
 - **Style:** Academic rigor with feasibility analysis
@@ -568,16 +612,19 @@ observability:
 ## 6. Implementation Roadmap
 
 ### Phase 1: Critical Blockers (Weeks 1-8)
+
 - ✅ **Week 1-2:** Resolve SLA conflicts in requirements
 - ✅ **Week 3-5:** Implement SourceVerifier + high-risk workflow
 - ✅ **Week 5-8:** Add ML monitoring infrastructure
 
 ### Phase 2: High-Value Features (Weeks 9-16)
+
 - ✅ **Week 9-11:** Complete Requirement 7 (watchlist management)
 - ✅ **Week 11-13:** Circuit breakers + caching implementation
 - ✅ **Week 13-16:** Security compliance (encryption, audits)
 
 ### Phase 3: Operational Excellence (Weeks 17-24)
+
 - ✅ **Week 17-19:** Observability (OpenTelemetry, dashboards, alerts)
 - ✅ **Week 19-21:** Scalability architecture (HA, DR, sharding)
 - ✅ **Week 21-24:** Multilingual support + internationalization
@@ -589,36 +636,42 @@ observability:
 ### Design Documentation Must Include:
 
 #### ✅ Architecture Diagrams
+
 - [ ] Component diagram with all agents (including SourceVerifier, BulkProcessor)
 - [ ] Data flow diagram with SLA annotations per stage
 - [ ] Sequence diagrams for high-risk event workflow
 - [ ] Deployment architecture (HA/DR, multi-region if applicable)
 
 #### ✅ API Specifications
+
 - [ ] OpenAPI 3.0 spec for all endpoints
 - [ ] Circuit breaker annotations per external dependency
 - [ ] Rate limiting and quota management policies
 - [ ] Bulk operation endpoints with performance targets
 
 #### ✅ Data Models
+
 - [ ] Complete schemas for all entities (News_Item, Entity, Impact_Card, Watch_Item)
 - [ ] Credibility_Score computation algorithm
 - [ ] Risk_Score calculation methodology
 - [ ] Audit log schema with immutability guarantees
 
 #### ✅ ML Operations
+
 - [ ] Model versioning strategy
 - [ ] Drift detection pipeline design
 - [ ] Evaluation dataset specifications
 - [ ] Retraining workflow automation
 
 #### ✅ Security & Compliance
+
 - [ ] Encryption specifications (TLS 1.2+, AES-256, KMS)
 - [ ] RBAC implementation with enforcement points
 - [ ] Audit trail design (S3 Object Lock configuration)
 - [ ] Privacy compliance workflows (GDPR/CCPA)
 
 #### ✅ Observability
+
 - [ ] OpenTelemetry trace schema
 - [ ] Metrics definitions with SLO thresholds
 - [ ] Alert routing and escalation policies
@@ -631,10 +684,12 @@ observability:
 ### High Risks (Likelihood: High, Impact: High)
 
 1. **ML Performance Verification**
+
    - **Risk:** Cannot validate 85/80/82 targets without evaluation infrastructure
    - **Mitigation:** Implement ML monitoring in Phase 1 (critical blocker)
 
 2. **Compliance Violation**
+
    - **Risk:** High-risk events without proper verification could violate SOC 2
    - **Mitigation:** SourceVerifier must be implemented before production
 
@@ -645,6 +700,7 @@ observability:
 ### Medium Risks (Likelihood: Medium, Impact: High)
 
 4. **External API Cost Overruns**
+
    - **Risk:** 80% quota alerts missing → unexpected You.com bills
    - **Mitigation:** Implement quota monitoring in Phase 2
 
@@ -657,12 +713,14 @@ observability:
 ## 9. Success Metrics
 
 ### Design Quality Metrics
+
 - ✅ **Traceability:** 100% of requirements mapped to design components
 - ✅ **Completeness:** 0 critical gaps (currently 6 identified)
 - ✅ **Testability:** All acceptance criteria have corresponding test types
 - ✅ **Reviewability:** Approval from security, compliance, ML, and product teams
 
 ### Implementation Readiness Metrics
+
 - ✅ **API Contract:** OpenAPI spec approved by frontend + backend
 - ✅ **Security Sign-off:** Encryption and audit design approved by CISO
 - ✅ **ML Validation:** Evaluation dataset prepared with 5K+ labeled samples
@@ -675,11 +733,13 @@ observability:
 The Enterprise Competitive Intelligence Agent design demonstrates strong foundational architecture but requires significant enhancements before implementation. The **75% alignment score** reflects solid work on core features (security/RBAC, API integration, agent orchestration) while highlighting critical gaps in operational systems (ML monitoring, high-risk processing, bulk operations).
 
 **Immediate Actions Required:**
+
 1. Product team must resolve SLA conflicts in requirements (Week 1)
 2. Backend team must design SourceVerifier and BulkProcessor (Weeks 3-5)
 3. ML team must implement monitoring infrastructure (Weeks 5-8)
 
 **Go/No-Go Decision Point:** End of Week 8
+
 - **Criteria:** SourceVerifier operational, ML monitoring functional, SLAs validated
 - **If Not Met:** Delay launch to avoid compliance/performance risks
 
@@ -688,18 +748,21 @@ The Enterprise Competitive Intelligence Agent design demonstrates strong foundat
 ## Appendices
 
 ### A. Expert Feedback Sources
+
 - **GPT-5 Thinking:** Comprehensive operational focus, OpenTelemetry expertise
 - **Claude Sonnet 4:** Holistic quality assessment, executive recommendations
 - **Gemini 2.5 Pro:** Actionability analysis, alerting mechanism critique
 - **Grok-4:** Enterprise standards alignment, IEEE/SOC 2 validation
 
 ### B. Reference Documents
+
 - [requirements.md](.kiro/specs/enterprise-cia/requirements.md)
 - [design.md](.kiro/specs/enterprise-cia/design.md)
 - [structure.md](.kiro/specs/enterprise-cia/structure.md)
 - [tech.md](.kiro/specs/enterprise-cia/tech.md)
 
 ### C. Glossary Alignment
+
 - **ARI:** AI Research Intelligence (You.com API)
 - **PSI:** Population Stability Index (drift metric)
 - **KS:** Kolmogorov-Smirnov (distribution comparison)

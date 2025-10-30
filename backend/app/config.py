@@ -1,5 +1,6 @@
 import os
 from pydantic_settings import BaseSettings
+from pydantic import SecretStr, field_validator
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -49,6 +50,43 @@ class Settings(BaseSettings):
     smtp_user: str = os.getenv("SMTP_USER", "")
     smtp_password: str = os.getenv("SMTP_PASSWORD", "")
     from_email: str = os.getenv("FROM_EMAIL", "noreply@enterprisecia.com")
+
+    # SSO Configuration - Week 1 Implementation
+    # Google OAuth2
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    google_client_secret: SecretStr = SecretStr(os.getenv("GOOGLE_CLIENT_SECRET", ""))
+    google_redirect_uri: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:3000/auth/google/callback")
+    
+    # Azure AD OAuth2
+    azure_client_id: str = os.getenv("AZURE_CLIENT_ID", "")
+    azure_client_secret: SecretStr = SecretStr(os.getenv("AZURE_CLIENT_SECRET", ""))
+    azure_tenant_id: str = os.getenv("AZURE_TENANT_ID", "")
+    azure_redirect_uri: str = os.getenv("AZURE_REDIRECT_URI", "http://localhost:3000/auth/azure/callback")
+    
+    # Okta OAuth2
+    okta_client_id: str = os.getenv("OKTA_CLIENT_ID", "")
+    okta_client_secret: SecretStr = SecretStr(os.getenv("OKTA_CLIENT_SECRET", ""))
+    okta_domain: str = os.getenv("OKTA_DOMAIN", "")
+    okta_redirect_uri: str = os.getenv("OKTA_REDIRECT_URI", "http://localhost:3000/auth/okta/callback")
+    
+    # Microsoft Teams Integration - Week 2 Implementation
+    teams_bot_token: SecretStr = SecretStr(os.getenv("TEAMS_BOT_TOKEN", ""))
+    teams_app_id: str = os.getenv("TEAMS_APP_ID", "")
+    teams_app_password: SecretStr = SecretStr(os.getenv("TEAMS_APP_PASSWORD", ""))
+    
+    # Frontend URL for links in notifications
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+    @field_validator('google_redirect_uri', 'azure_redirect_uri', 'okta_redirect_uri')
+    @classmethod
+    def validate_redirect_uris(cls, v):
+        """Validate redirect URIs are not localhost in production"""
+        environment = os.getenv('ENVIRONMENT', os.getenv('ENV', 'development'))
+        
+        if environment != 'development' and 'localhost' in v:
+            raise ValueError(f"Redirect URI cannot contain 'localhost' in {environment} environment")
+        
+        return v
 
     class Config:
         env_file = ".env"

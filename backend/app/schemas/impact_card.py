@@ -67,7 +67,7 @@ class ImpactCardCreate(ImpactCardBase):
 
 class ImpactCard(ImpactCardBase):
     id: int
-    watch_item_id: int
+    watch_item_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime]
 

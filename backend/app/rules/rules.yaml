@@ -1,0 +1,207 @@
+# Enterprise CIA - Configurable Rules DSL
+# This file defines the business rules for competitive intelligence analysis
+
+# Risk Scoring Rules
+risk_scoring:
+  # Product Launch Rules
+  - condition:
+      event_type: "product_launch"
+      competitor_tier: "tier1" # Major competitors
+    then:
+      base_risk_score: 85
+      risk_level: "high"
+      priority: "immediate"
+
+  - condition:
+      event_type: "product_launch"
+      competitor_tier: "tier2" # Secondary competitors
+    then:
+      base_risk_score: 65
+      risk_level: "medium"
+      priority: "short-term"
+
+  # Pricing Changes
+  - condition:
+      event_type: "pricing_change"
+      price_direction: "decrease"
+    then:
+      base_risk_score: 75
+      risk_level: "high"
+      priority: "immediate"
+
+  - condition:
+      event_type: "pricing_change"
+      price_direction: "increase"
+    then:
+      base_risk_score: 45
+      risk_level: "medium"
+      priority: "monitor"
+
+  # Partnership Announcements
+  - condition:
+      event_type: "partnership"
+      partner_type: "strategic"
+    then:
+      base_risk_score: 70
+      risk_level: "high"
+      priority: "short-term"
+
+  # Regulatory Actions
+  - condition:
+      event_type: "regulatory_action"
+      impact_scope: "industry"
+    then:
+      base_risk_score: 80
+      risk_level: "high"
+      priority: "immediate"
+
+# Source Credibility Rules
+source_credibility:
+  tier1_domains:
+    - "wsj.com"
+    - "reuters.com"
+    - "bloomberg.com"
+    - "ft.com"
+    - "nytimes.com"
+    - "techcrunch.com"
+    - "forbes.com"
+
+  tier2_domains:
+    - "venturebeat.com"
+    - "theinformation.com"
+    - "axios.com"
+    - "theverge.com"
+    - "wired.com"
+
+  tier3_domains:
+    - "medium.com"
+    - "hackernoon.com"
+    - "dev.to"
+
+# Alert Thresholds
+alert_thresholds:
+  critical: 85 # Immediate notification required
+  high: 70 # Alert within 1 hour
+  medium: 50 # Daily digest inclusion
+  low: 30 # Weekly summary only
+
+# Action Assignment Rules
+action_assignment:
+  - keywords: ["pricing", "price", "cost", "subscription"]
+    owner: "Revenue Ops"
+    okr: "Improve monetization efficiency"
+
+  - keywords: ["product", "feature", "launch", "release"]
+    owner: "Product"
+    okr: "Enhance product differentiation"
+
+  - keywords: ["marketing", "campaign", "brand", "messaging"]
+    owner: "Marketing"
+    okr: "Increase market awareness"
+
+  - keywords: ["sales", "enterprise", "b2b", "customer"]
+    owner: "Sales"
+    okr: "Expand enterprise adoption"
+
+  - keywords: ["regulatory", "compliance", "legal", "policy"]
+    owner: "Compliance"
+    okr: "Maintain regulatory readiness"
+
+  - keywords: ["partnership", "integration", "acquisition"]
+    owner: "Strategy Team"
+    okr: "Drive strategic partnerships"
+
+# Notification Rules Templates
+notification_templates:
+  risk_threshold:
+    subject: "🚨 HIGH RISK ALERT: {competitor}"
+    body: |
+      Risk Score: {risk_score}/100 ({risk_level})
+      Confidence: {confidence}%
+      Sources: {total_sources}
+
+      Key Insights:
+      {key_insights}
+
+      View Impact Card: {card_url}
+
+  trend_change:
+    subject: "📈 RISK TREND ALERT: {competitor}"
+    body: |
+      Risk Score: {current_risk}/100 (was {previous_risk}/100)
+      Change: {change:+d} points ({trend})
+
+      This represents a significant change in competitive risk level.
+
+  daily_digest:
+    subject: "📊 Daily Competitive Intelligence Digest - {date}"
+    body: |
+      ## Summary
+      - {total_cards} total impact cards generated
+      - {high_risk_count} high-risk alerts
+      - {medium_risk_count} medium-risk updates
+
+      ## High-Risk Alerts 🚨
+      {high_risk_cards}
+
+      ## Medium-Risk Updates 📊
+      {medium_risk_cards}
+
+# Processing Rules
+processing:
+  # Minimum sources required for high confidence
+  min_sources_high_confidence: 15
+
+  # Maximum processing time before timeout
+  max_processing_time_seconds: 180
+
+  # Cache TTL settings
+  cache_ttl:
+    news: 900 # 15 minutes
+    search: 3600 # 1 hour
+    analysis: 1800 # 30 minutes
+    research: 604800 # 7 days
+
+  # Rate limiting
+  rate_limits:
+    news_per_hour: 100
+    search_per_hour: 200
+    chat_per_hour: 50
+    ari_per_hour: 20
+
+# Quality Assurance Rules
+quality_assurance:
+  # Minimum confidence score for auto-approval
+  min_confidence_auto_approve: 80
+
+  # Require human review if:
+  review_required:
+    - risk_score: ">= 85"
+      credibility_score: "< 0.8"
+    - confidence_score: "< 70"
+    - total_sources: "< 10"
+
+  # Source diversity requirements
+  source_diversity:
+    min_tier1_sources: 2 # For high-risk alerts
+    min_total_sources: 5 # For any alert
+    max_single_domain_percentage: 40 # No more than 40% from one domain
+
+# Competitor Tiers (for risk scoring)
+competitor_tiers:
+  tier1: # Major direct competitors
+    - "OpenAI"
+    - "Anthropic"
+    - "Google AI"
+    - "Microsoft"
+
+  tier2: # Secondary competitors
+    - "Mistral AI"
+    - "Cohere"
+    - "Hugging Face"
+    - "Stability AI"
+
+  tier3: # Emerging competitors
+    - "Perplexity AI"
+    - "Character.AI"
+    - "Replicate"

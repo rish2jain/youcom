@@ -301,3 +301,6 @@ class PDFReportGenerator:
 
 # Singleton instance
 pdf_generator = PDFReportGenerator()
+
+# Export for compatibility
+PDFService = PDFReportGenerator

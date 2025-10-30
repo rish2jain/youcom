@@ -57,6 +57,7 @@ class WorkspaceMember(Base):
     # Relationships
     workspace = relationship("Workspace", back_populates="members")
     user = relationship("User", back_populates="workspace_memberships", foreign_keys=[user_id])
+    invited_by_user = relationship("User", foreign_keys=[invited_by])
 
     def __repr__(self):
         return f"<WorkspaceMember(workspace_id={self.workspace_id}, user_id={self.user_id}, role={self.role})>"

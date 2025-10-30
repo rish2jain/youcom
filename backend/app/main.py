@@ -7,7 +7,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,8 +17,9 @@ from app.config import settings
 from app.database import engine, Base, get_db
 from app.api import watch, impact, research
 from app.api import metrics, notifications, feedback
-from app.api import auth, workspaces
+from app.api import auth, workspaces, analytics
 from app.realtime import sio
+from app.services.scheduler import alert_scheduler
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.impact_card import ImpactCard
@@ -48,9 +49,64 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     
     logger.info("✅ Database tables created")
+    
+    # Start automated alert scheduler
+    await alert_scheduler.start()
+    logger.info("🔔 Automated alert scheduler started")
+    
+    # Initialize SOC 2 security controls
+    from app.services.soc2_service import soc2_service, AuditEventType
+    await soc2_service.log_audit_event(
+        event_type=AuditEventType.SYSTEM_CONFIGURATION,
+        action="System startup",
+        details={"environment": settings.environment, "version": "1.0.0"}
+    )
+    logger.info("🔒 SOC 2 audit logging initialized")
+    
+    # Start performance monitoring
+    try:
+        from app.services.performance_monitor import start_performance_monitoring
+        await start_performance_monitoring()
+        logger.info("🚀 Advanced orchestration monitoring started")
+    except Exception as e:
+        logger.warning(f"⚠️ Performance monitoring failed to start: {e}")
+    
+    # Initialize enhancement features
+    try:
+        from app.services.personal_playbook_service import PersonalPlaybookService
+        from app.services.action_tracker_service import ActionTrackerService
+        from app.database import get_db
+        
+        db = next(get_db())
+        try:
+            # Initialize built-in personas (sync call)
+            playbook_service = PersonalPlaybookService(db)
+            playbook_service.initialize_builtin_personas()
+            logger.info("✅ Built-in persona presets initialized")
+            
+            # Initialize built-in action templates (sync call)
+            action_service = ActionTrackerService(db)
+            action_service.initialize_builtin_templates()
+            logger.info("✅ Built-in action templates initialized")
+            
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"⚠️ Enhancement features initialization failed: {e}")
+    
     yield
     
     # Shutdown
+    await alert_scheduler.stop()
+    logger.info("🔔 Alert scheduler stopped")
+    
+    # Stop performance monitoring
+    try:
+        from app.services.performance_monitor import stop_performance_monitoring
+        await stop_performance_monitoring()
+        logger.info("⏹️ Advanced orchestration monitoring stopped")
+    except Exception as e:
+        logger.warning(f"⚠️ Performance monitoring failed to stop: {e}")
     logger.info("🛑 Shutting down Enterprise CIA Backend")
 
 # Create FastAPI app
@@ -89,6 +145,35 @@ app.include_router(feedback.router, prefix="/api/v1")
 # Enterprise features
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(workspaces.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1")
+
+# Monitoring and resilience
+from app.api import monitoring
+app.include_router(monitoring.router, prefix="/api/v1")
+
+# Week 1 Implementation - Advanced Features
+from app.api import advanced_orchestration, sso, integrations
+app.include_router(advanced_orchestration.router)
+app.include_router(sso.router)
+app.include_router(integrations.router)
+
+# Week 2 Implementation - Enterprise Readiness
+from app.api import compliance
+app.include_router(compliance.router)
+
+# Week 3 Implementation - Advanced Features
+from app.api import advanced_intelligence
+app.include_router(advanced_intelligence.router)
+
+# Week 4 Implementation - Community Platform & White-label Solutions
+from app.api import community, whitelabel, integration_marketplace
+app.include_router(community.router)
+app.include_router(whitelabel.router)
+app.include_router(integration_marketplace.router)
+
+# Enhancement Features - Timeline, Evidence, Playbooks, Actions
+from app.api import enhancements
+app.include_router(enhancements.router)
 
 # Socket.IO events for real-time updates
 @sio.event
@@ -125,17 +210,17 @@ async def health_check():
 async def _run_you_api_checks() -> Dict[str, Any]:
     """Execute health checks for all You.com APIs concurrently."""
 
-    from app.services.you_client import YouComOrchestrator
+    from app.services.resilient_you_client import ResilientYouComOrchestrator
 
-    async with YouComOrchestrator() as client:
-        async def check_api(name: str, coroutine, endpoint: str):
+    async with ResilientYouComOrchestrator() as client:
+        async def check_api(name: str, coroutine, endpoint: str, timeout: int = 10):
             try:
-                await asyncio.wait_for(coroutine, timeout=10)
+                await asyncio.wait_for(coroutine, timeout=timeout)
                 return name, {"status": "healthy", "endpoint": endpoint}
             except asyncio.TimeoutError:
                 return name, {
                     "status": "unhealthy",
-                    "error": "timeout after 10s",
+                    "error": f"timeout after {timeout}s",
                     "endpoint": endpoint,
                 }
             except Exception as exc:  # pragma: no cover - defensive
@@ -150,21 +235,25 @@ async def _run_you_api_checks() -> Dict[str, Any]:
                 "search",
                 client.search_context("health-check", limit=1),
                 settings.you_search_url,
+                timeout=10,
             ),
             check_api(
                 "news",
                 client.fetch_news("health-check", limit=1),
                 settings.you_news_url,
+                timeout=10,
             ),
             check_api(
                 "chat",
                 client.analyze_impact({"articles": []}, {"results": []}, "HealthCo"),
                 settings.you_chat_url,
+                timeout=15,
             ),
             check_api(
                 "ari",
-                client.generate_research_report("health-check signal"),
+                client.generate_research_report("Brief health check"),
                 settings.you_ari_url,
+                timeout=30,  # ARI needs more time for comprehensive research
             ),
         )
 
@@ -182,6 +271,7 @@ async def _run_you_api_checks() -> Dict[str, Any]:
         "timestamp": datetime.utcnow().isoformat(),
         "overall_status": overall,
         "apis": api_results,
+        "resilience_status": client.get_health_status(),
     }
 
 
@@ -200,6 +290,49 @@ async def check_you_apis():
     YOU_API_HEALTH_CACHE["data"] = results
     YOU_API_HEALTH_CACHE["timestamp"] = now
     return results
+
+@app.get("/api/v1/health/resilience")
+async def check_resilience_status():
+    """Get detailed resilience status including circuit breakers and rate limiting."""
+    from app.services.resilient_you_client import ResilientYouComOrchestrator
+    
+    async with ResilientYouComOrchestrator() as client:
+        health_status = client.get_health_status()
+        
+        # Add summary metrics
+        circuit_states = [cb["state"] for cb in health_status["circuit_breakers"].values()]
+        open_circuits = sum(1 for state in circuit_states if state == "open")
+        degraded_circuits = sum(1 for state in circuit_states if state == "half_open")
+        
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "summary": {
+                "total_circuits": len(circuit_states),
+                "open_circuits": open_circuits,
+                "degraded_circuits": degraded_circuits,
+                "healthy_circuits": len(circuit_states) - open_circuits - degraded_circuits,
+                "overall_health": "healthy" if open_circuits == 0 else "degraded" if open_circuits < 2 else "unhealthy"
+            },
+            "details": health_status,
+            "recommendations": _get_resilience_recommendations(health_status)
+        }
+
+def _get_resilience_recommendations(health_status: Dict) -> List[str]:
+    """Generate recommendations based on circuit breaker status"""
+    recommendations = []
+    
+    for api, status in health_status["circuit_breakers"].items():
+        if status["state"] == "open":
+            recommendations.append(f"🚨 {api.upper()} API is down - using fallback data")
+        elif status["state"] == "half_open":
+            recommendations.append(f"⚠️ {api.upper()} API is recovering - monitoring closely")
+        elif status["failure_count"] > 2:
+            recommendations.append(f"⚡ {api.upper()} API showing instability - consider manual review")
+    
+    if not recommendations:
+        recommendations.append("✅ All APIs operating normally")
+    
+    return recommendations
 
 # Root endpoint
 @app.get("/")
