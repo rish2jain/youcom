@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -79,5 +79,34 @@ class ImpactCardList(BaseModel):
     total: int
 
 class ImpactCardGenerate(BaseModel):
-    competitor_name: str = Field(..., min_length=1, max_length=255)
-    keywords: List[str] = Field(default_factory=list)
+    competitor_name: str = Field(..., min_length=2, max_length=100, description="Competitor company name")
+    keywords: List[str] = Field(
+        default_factory=list,
+        max_length=10,
+        description="List of keywords to monitor (max 10)"
+    )
+
+    @field_validator('competitor_name')
+    @classmethod
+    def validate_competitor_name(cls, v: str) -> str:
+        """Validate and sanitize competitor name"""
+        if not v or not v.strip():
+            raise ValueError('Competitor name cannot be empty')
+        # Strip whitespace and limit length
+        sanitized = v.strip()[:100]
+        return sanitized
+
+    @field_validator('keywords')
+    @classmethod
+    def validate_keywords(cls, v: List[str]) -> List[str]:
+        """Validate and limit keywords"""
+        if not v:
+            return []
+        if len(v) > 10:
+            raise ValueError('Maximum 10 keywords allowed')
+        # Sanitize each keyword and limit length
+        sanitized = []
+        for keyword in v:
+            if keyword and keyword.strip():
+                sanitized.append(keyword.strip()[:50])
+        return sanitized[:10]  # Extra safety check

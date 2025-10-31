@@ -83,7 +83,9 @@ export async function POST(request: Request) {
       // Update item with latest activity if news found
       if (newsResponse.hits && newsResponse.hits.length > 0) {
         const latestNews = newsResponse.hits[0];
-        newItem.latest_activity = `Latest: ${latestNews.title} - ${latestNews.source}`;
+        (
+          newItem as any
+        ).latest_activity = `Latest: ${latestNews.title} - ${latestNews.source}`;
         newItem.last_checked = new Date().toISOString();
       }
     } catch (apiError) {
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
       });
 
       // Continue without news data - don't fail the entire request
-      newItem.latest_activity =
+      (newItem as any).latest_activity =
         "Monitoring active - initial news fetch pending";
     }
 

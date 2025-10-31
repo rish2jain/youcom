@@ -10,7 +10,7 @@ export const backendApi = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 3000, // Shorter timeout for backend
+  timeout: 60000, // Match backend 60s timeout for API orchestration
 });
 
 // Create local API client (Next.js API routes)

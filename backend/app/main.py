@@ -9,9 +9,12 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import socketio
 from app.config import settings
 from app.database import engine, Base, get_db
@@ -25,12 +28,14 @@ from sqlalchemy import select
 from app.models.impact_card import ImpactCard
 from app.models.company_research import CompanyResearch
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+# Configure structured logging with request ID tracking
+from app.logging_config import get_logger, setup_logging
+
+setup_logging(
+    level="INFO" if settings.environment == "production" else "DEBUG",
+    structured=settings.environment == "production"
 )
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Health check caching
 YOU_API_HEALTH_CACHE: Dict[str, Any] = {"timestamp": None, "data": None}
@@ -117,20 +122,49 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# Initialize rate limiter
+from app.rate_limiter import limiter
+from slowapi.middleware import SlowAPIMiddleware
+
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Setup middleware for request ID, logging, error handling, and performance monitoring
+from app.middleware import setup_middleware
+setup_middleware(app)
+
+# Add CORS middleware with environment-based configuration
+if settings.environment == "production":
+    # Production: Only allow specific frontend URL
+    allowed_origins = [settings.frontend_url] if settings.frontend_url else []
+    
+    # Validate that production has allowed origins
+    if not allowed_origins:
+        error_msg = "Production CORS configuration error: FRONTEND_URL environment variable is required but not set"
+        logger.error(error_msg)
+        raise RuntimeError(error_msg)
+    
+    logger.info(f"🔒 CORS configured for production: {allowed_origins}")
+else:
+    # Development: Allow common localhost ports
+    allowed_origins = [
         "http://localhost:3000",
-        "http://localhost:3001", 
+        "http://localhost:3001",
         "http://localhost:3456",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "http://127.0.0.1:3456"
-    ],
+    ]
+    logger.info("🔓 CORS configured for development with multiple origins")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Explicit methods instead of "*"
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],  # Explicit headers
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Include API routers

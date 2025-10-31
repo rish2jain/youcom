@@ -52,6 +52,9 @@ htmlcov/
 .kiro/
 .qodo/
 
+# Development Tools
+.checkpoints/
+
 # Database
 *.db
 *.sqlite
@@ -65,7 +68,43 @@ logs/
 .DS_Store
 Thumbs.db
 
+# Project-Specific Directories
+# Strategy: Track code, documentation, and configuration files
+# Ignore: Large media files, cache directories, temporary content
 
+# Demo Assets
+# Track: Code, configs, timelines, documentation, key screenshots
+# Ignore: Large video files, Python cache, bulk/temp screenshots
+demo/videos/*.mp4
+demo/videos/*.mov
+demo/videos/*.avi
+demo/videos/*.webm
+demo/videos/archive/*.mp4
+demo/videos/archive/*.mov
+demo/videos/archive/*.avi
+demo/videos/archive/*.webm
+demo/system/__pycache__/
+demo/archive/__pycache__/
+demo/screenshots/bulk_*
+demo/screenshots/temp_*
+
+# Archive Directory  
+# Track: All documentation, code, and configuration files
+# Ignore: Python cache, large media files, temporary content
+Archive/**/__pycache__/
+Archive/**/*.mp4
+Archive/**/*.mov
+Archive/**/*.avi
+Archive/**/*.webm
+Archive/**/bulk_*
+Archive/**/temp_*
+
+# Note: The following ARE tracked in demo/ and Archive/:
+# - *.md (documentation)
+# - *.py, *.js (code files)  
+# - *.json, *.txt (configuration and data)
+# - *.sh (shell scripts)
+# - Key screenshots (existing ones remain tracked)
 
 .nx/cache
 .nx/workspace-data

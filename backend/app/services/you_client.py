@@ -59,7 +59,10 @@ class YouComOrchestrator:
     """Orchestrates all 4 You.com APIs for competitive intelligence"""
 
     def __init__(self, api_key: str = None):
-        self.api_key = api_key or settings.you_api_key
+        # Extract actual key from SecretStr if needed
+        raw_key = api_key or settings.you_api_key
+        self.api_key = raw_key.get_secret_value() if hasattr(raw_key, 'get_secret_value') else raw_key
+
         if not self.api_key or self.api_key == "your_you_api_key_here":
             raise ValueError("You.com API key is required. Please set YOU_API_KEY in your .env file")
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -20,13 +20,21 @@ from app.config import settings
 router = APIRouter(prefix="/research", tags=["company-research"])
 logger = logging.getLogger(__name__)
 
+# Import shared limiter
+from app.rate_limiter import limiter
+
 @router.post("/company", response_model=CompanyResearchSchema, status_code=status.HTTP_201_CREATED)
+@limiter.limit("15/minute")  # Limit to 15 company research requests per minute per IP
 async def research_company(
+    request_obj: Request,  # Required for rate limiter
     request: CompanyResearchRequest,
     db: AsyncSession = Depends(get_db),
     you_client: YouComOrchestrator = Depends(get_you_client)
 ):
-    """Research a company using You.com APIs (Individual User Feature)"""
+    """Research a company using You.com APIs (Individual User Feature)
+
+    Rate limit: 15 requests per minute per IP address
+    """
     try:
         # Perform quick company research
         logger.info(f"🏢 Starting company research for {request.company_name}")

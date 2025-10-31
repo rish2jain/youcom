@@ -232,7 +232,13 @@ class UsageTracker {
     });
 
     return Object.entries(buckets)
-      .map(([time, counts]) => ({ time, ...counts }))
+      .map(([time, counts]) => ({
+        time,
+        news: counts.news || 0,
+        search: counts.search || 0,
+        chat: counts.chat || 0,
+        ari: counts.ari || 0,
+      }))
       .sort((a, b) => a.time.localeCompare(b.time));
   }
 }

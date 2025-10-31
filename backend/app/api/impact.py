@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Dict, Any
@@ -34,6 +34,9 @@ from app.realtime import emit_progress
 
 router = APIRouter(prefix="/impact", tags=["impact-cards"])
 logger = logging.getLogger(__name__)
+
+# Import shared limiter
+from app.rate_limiter import limiter
 
 
 @router.get("/comparison")
@@ -78,12 +81,17 @@ async def compare_impact_cards(
     }
 
 @router.post("/generate", response_model=ImpactCardSchema, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")  # Limit to 10 impact cards per minute per IP
 async def generate_impact_card(
+    request_obj: Request,  # Required for rate limiter
     request: ImpactCardGenerate,
     db: AsyncSession = Depends(get_db),
     you_client: YouComOrchestrator = Depends(get_you_client),
 ):
-    """Generate a new Impact Card using You.com APIs"""
+    """Generate a new Impact Card using You.com APIs
+
+    Rate limit: 10 requests per minute per IP address
+    """
     try:
         # Generate Impact Card using all 4 You.com APIs
         logger.info(f"🚀 Generating Impact Card for {request.competitor_name}")
@@ -165,12 +173,17 @@ async def generate_impact_card(
         )
 
 @router.post("/watch/{watch_id}/generate", response_model=ImpactCardSchema, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")  # IP-based rate limit for watchlist operations
 async def generate_impact_card_for_watch(
+    request: Request,  # Required for rate limiter
     watch_id: int,
     db: AsyncSession = Depends(get_db),
     you_client: YouComOrchestrator = Depends(get_you_client),
 ):
-    """Generate Impact Card for a specific watchlist item"""
+    """Generate Impact Card for a specific watchlist item
+
+    Rate limit: 20 requests per minute per IP address
+    """
     # Get watch item
     result = await db.execute(select(WatchItem).where(WatchItem.id == watch_id))
     watch_item = result.scalar_one_or_none()

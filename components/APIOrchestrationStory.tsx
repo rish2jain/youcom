@@ -10,7 +10,7 @@ import {
   ArrowRight,
   BarChart3,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, backendApi } from "@/lib/api";
 
 interface APIFlowStepProps {
   number: number;
@@ -92,11 +92,53 @@ export function APIOrchestrationStory() {
 
   const { data: metrics } = useQuery({
     queryKey: ["apiUsageMetrics", selectedTimeRange],
-    queryFn: () =>
-      api
-        .get(`/api/v1/metrics/api-usage?range=${selectedTimeRange}`)
-        .then((res) => res.data),
+    queryFn: async () => {
+      try {
+        // Use backendApi directly to ensure we hit the FastAPI backend, not Next.js API routes
+        const response = await backendApi.get(
+          `/api/v1/metrics/api-usage?range=${selectedTimeRange}`
+        );
+        const data = response.data;
+        // Ensure we always return a valid object, never undefined
+        return (
+          data || {
+            impact_cards: 0,
+            company_research: 0,
+            total_calls: 0,
+            success_rate: null,
+            average_latency_ms: null,
+            p95_latency_ms: null,
+            p99_latency_ms: null,
+            by_service: {},
+            usage_last_24h: [],
+            last_call_at: null,
+            total_sources: 0,
+            average_processing_seconds: null,
+            last_generated_at: null,
+          }
+        );
+      } catch (error) {
+        console.error("API Usage Metrics Error:", error);
+        // Return default data structure instead of throwing
+        return {
+          impact_cards: 0,
+          company_research: 0,
+          total_calls: 0,
+          success_rate: null,
+          average_latency_ms: null,
+          p95_latency_ms: null,
+          p99_latency_ms: null,
+          by_service: {},
+          usage_last_24h: [],
+          last_call_at: null,
+          total_sources: 0,
+          average_processing_seconds: null,
+          last_generated_at: null,
+        };
+      }
+    },
     staleTime: 60 * 1000,
+    retry: 1,
   });
 
   const apiSteps = [
