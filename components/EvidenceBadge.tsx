@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -118,11 +118,7 @@ const EvidenceBadge: React.FC<EvidenceBadgeProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadEvidenceData();
-  }, [entityType, entityId]);
-
-  const loadEvidenceData = async () => {
+  const loadEvidenceData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -152,7 +148,11 @@ const EvidenceBadge: React.FC<EvidenceBadgeProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [entityType, entityId]); // Fixed: Added dependencies for useCallback
+
+  useEffect(() => {
+    loadEvidenceData();
+  }, [loadEvidenceData]); // Fixed: Added loadEvidenceData to dependencies
 
   const getBadgeIcon = (confidenceLevel: string) => {
     switch (confidenceLevel) {

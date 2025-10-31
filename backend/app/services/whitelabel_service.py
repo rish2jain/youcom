@@ -542,8 +542,8 @@ class WhiteLabelService:
             try:
                 # Attempt to store in secure secret store
                 secret_name = f"secret_ref_{deployment.id}"
-                # TODO: Replace with actual secret store implementation
-                # success = await save_secret(secret_name, db_password)
+                # FUTURE: Integrate with secret management service (AWS Secrets Manager, HashiCorp Vault, or Azure Key Vault)
+                # Example: success = await secrets_client.store_secret(secret_name, db_password)
                 success = False  # Placeholder until secret store is implemented
                 
                 if success:

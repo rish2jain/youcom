@@ -21,11 +21,15 @@ router = APIRouter(prefix="/api/ml", tags=["ML Training"])
 # Pydantic models for API requests/responses
 
 class TrainingJobRequest(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     model_type: ModelType
     trigger_type: TriggerType = TriggerType.MANUAL
     config_override: Optional[Dict[str, Any]] = None
 
 class TrainingJobResponse(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     job_id: str
     model_type: str
     status: str
@@ -40,6 +44,8 @@ class PredictionRequestModel(BaseModel):
     use_cache: bool = True
 
 class PredictionResponse(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     prediction_type: str
     predicted_value: Any
     confidence_score: float
@@ -49,6 +55,8 @@ class PredictionResponse(BaseModel):
     metadata: Dict[str, Any]
 
 class ModelRegistrationRequest(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     model_type: ModelType
     version: str
     file_paths: Dict[str, str]
@@ -59,11 +67,15 @@ class ModelRegistrationRequest(BaseModel):
     deployment_strategy: DeploymentStrategy = DeploymentStrategy.IMMEDIATE
 
 class ModelDeploymentRequest(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     model_id: str
     deployment_strategy: Optional[DeploymentStrategy] = None
     ab_test_config: Optional[Dict[str, Any]] = None
 
 class ABTestConfigModel(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     test_id: str
     model_a_version: str
     model_b_version: str
@@ -74,6 +86,8 @@ class ABTestConfigModel(BaseModel):
     minimum_samples: int = 100
 
 class RollbackRequest(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     model_type: ModelType
     target_version: Optional[str] = None
     reason: str = "Manual rollback"

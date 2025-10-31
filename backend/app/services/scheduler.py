@@ -219,12 +219,14 @@ This represents a significant change in competitive risk level.
     async def _send_slack_alert(self, rule: NotificationRule, context: Dict[str, Any]):
         """Send Slack alert (placeholder for future implementation)"""
         logger.info(f"📱 Slack alert would be sent to {rule.target}")
-        # TODO: Implement Slack webhook integration
+        # FUTURE: Implement Slack webhook integration using rule.target as webhook URL
+        # Reference: https://api.slack.com/messaging/webhooks
         
     async def _send_webhook_alert(self, rule: NotificationRule, context: Dict[str, Any]):
         """Send webhook alert (placeholder for future implementation)"""
         logger.info(f"🔗 Webhook alert would be sent to {rule.target}")
-        # TODO: Implement webhook integration
+        # FUTURE: Implement generic webhook integration with POST request to rule.target
+        # Include context data as JSON payload with retry logic and timeout handling
         
     async def _generate_daily_digest(self):
         """Generate daily digest of competitive intelligence"""

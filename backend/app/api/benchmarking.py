@@ -189,7 +189,7 @@ async def get_workspace_metrics(
     metric_name: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    aggregation: str = Query("hourly", regex="^(raw|hourly|daily|weekly)$"),
+    aggregation: str = Query("hourly", pattern="^(raw|hourly|daily|weekly)$"),
     db: AsyncSession = Depends(get_db)
 ):
     """Get detailed metrics data for a workspace"""
@@ -320,8 +320,8 @@ async def get_anomaly_detection(
     workspace_id: str,
     metric_name: Optional[str] = None,
     days_back: int = Query(7, ge=1, le=30),
-    severity: Optional[str] = Query(None, regex="^(low|medium|high|critical)$"),
-    detection_method: str = Query("statistical", regex="^(statistical|ml_based|threshold)$"),
+    severity: Optional[str] = Query(None, pattern="^(low|medium|high|critical)$"),
+    detection_method: str = Query("statistical", pattern="^(statistical|ml_based|threshold)$"),
     db: AsyncSession = Depends(get_db)
 ):
     """Get anomaly detection results for workspace metrics"""
@@ -416,7 +416,7 @@ async def get_anomaly_detection(
 async def get_industry_benchmarks(
     industry_sector: str,
     metric_name: Optional[str] = None,
-    benchmark_type: str = Query("percentile", regex="^(percentile|mean|median)$"),
+    benchmark_type: str = Query("percentile", pattern="^(percentile|mean|median)$"),
     db: AsyncSession = Depends(get_db)
 ):
     """Get industry benchmark data"""

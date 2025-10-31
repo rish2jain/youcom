@@ -244,19 +244,24 @@ def setup_middleware(app):
     Order matters! Middleware is applied in reverse order (last added = first executed)
 
     Execution order:
-    1. PerformanceMonitoringMiddleware (outermost - tracks total time)
-    2. RequestLoggingMiddleware (logs requests/responses)
-    3. ErrorHandlingMiddleware (catches errors)
-    4. RequestIDMiddleware (innermost - sets up request ID)
+    1. SecurityHeadersMiddleware (outermost - adds security headers)
+    2. PerformanceMonitoringMiddleware (tracks total time)
+    3. RequestLoggingMiddleware (logs requests/responses)
+    4. ErrorHandlingMiddleware (catches errors)
+    5. RequestIDMiddleware (innermost - sets up request ID)
 
     Usage:
         from app.middleware import setup_middleware
         setup_middleware(app)
     """
+    from app.security_headers import SecurityHeadersMiddleware
+    from app.config import settings
+
     # Add in reverse order (LIFO)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(ErrorHandlingMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(PerformanceMonitoringMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware, environment=settings.environment)
 
-    logger.info("✅ Middleware configured: RequestID, Logging, ErrorHandling, Performance")
+    logger.info("✅ Middleware configured: SecurityHeaders, RequestID, Logging, ErrorHandling, Performance")

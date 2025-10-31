@@ -44,7 +44,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     if (isLoaded && !isOnboarded && pathname !== "/demo") {
       setShowOnboarding(true);
     }
-  }, [isLoaded, isOnboarded, pathname]); // Removed setUserContext from dependencies
+  }, [isLoaded, isOnboarded, pathname, setUserContext]); // Fixed: Added setUserContext to dependencies
 
   const handleOnboardingComplete = (data: {
     companyName: string;
