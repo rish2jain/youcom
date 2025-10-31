@@ -69,23 +69,17 @@ export function APIUsageDashboard() {
           }
         );
       } catch (error) {
-        console.error("API Usage Metrics Error:", error);
-        // Return default data structure instead of throwing
-        return {
-          impact_cards: 0,
-          company_research: 0,
-          total_calls: 0,
-          success_rate: null,
-          average_latency_ms: null,
-          p95_latency_ms: null,
-          p99_latency_ms: null,
-          by_service: {},
-          usage_last_24h: [],
-          last_call_at: null,
-          total_sources: 0,
-          average_processing_seconds: null,
-          last_generated_at: null,
-        };
+        // Enhanced error logging with context
+        console.error("API Usage Metrics Error:", {
+          error,
+          dateRange,
+          timestamp: new Date().toISOString(),
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
+
+        // Throw error to allow React Query error boundary to handle
+        // This provides better user feedback than silent failures
+        throw error;
       }
     },
     staleTime: 60 * 1000,
@@ -162,16 +156,20 @@ export function APIUsageDashboard() {
       </div>
 
       {errorMessage && (
-        <div className="mb-4 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mb-4 p-6 bg-red-50 border border-red-200 rounded-lg">
           <div className="text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Activity className="w-8 h-8 text-blue-600" />
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Activity className="w-8 h-8 text-red-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              ✨ API Usage Metrics
+              ⚠️ Unable to Load API Metrics
             </h3>
             <p className="text-gray-600 mb-4">
-              Your API calls will appear here once you start using the platform
+              {errorMessage}
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              This may be due to backend connectivity issues. The metrics will
+              load once the backend is available.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div className="bg-white p-3 rounded-lg shadow-sm">
@@ -195,8 +193,11 @@ export function APIUsageDashboard() {
                 <div className="text-xs text-gray-500">Deep research</div>
               </div>
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-              Refresh Metrics
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Retry Connection
             </button>
           </div>
         </div>

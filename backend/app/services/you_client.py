@@ -50,10 +50,21 @@ class YouComAPIError(Exception):
         *,
         status_code: Optional[int] = None,
         payload: Optional[Any] = None,
+        api_type: Optional[str] = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.payload = payload
+        self.api_type = api_type
+
+    def __str__(self) -> str:
+        """Enhanced string representation with context"""
+        parts = [str(self.args[0])]
+        if self.api_type:
+            parts.append(f"API: {self.api_type}")
+        if self.status_code:
+            parts.append(f"Status: {self.status_code}")
+        return " | ".join(parts)
 
 class YouComOrchestrator:
     """Orchestrates all 4 You.com APIs for competitive intelligence"""
@@ -279,32 +290,40 @@ class YouComOrchestrator:
                 "weight": weight * 0.9,
             })
 
-        # Handle research data citations - could be in different formats
+        # Handle research data citations - with type guards for safety
         citations = research_data.get("citations", [])
-        if citations:
+        if citations and isinstance(citations, list):
             for citation in citations:
+                # Type guard: Handle dict citations
                 if isinstance(citation, dict):
                     url = citation.get("url")
-                    if not url:
+                    if not url or not isinstance(url, str):
                         continue
                     tier, weight = self._tier_for_domain(url)
                     sources.append({
                         "type": "research",
-                        "title": citation.get("title"),
+                        "title": citation.get("title", "Research Citation"),
                         "url": url,
                         "tier": tier,
                         "weight": weight * 1.1,
                     })
+                # Type guard: Handle string citations
                 elif isinstance(citation, str):
-                    # Handle string citations
-                    tier, weight = self._tier_for_domain(citation)
-                    sources.append({
-                        "type": "research",
-                        "title": "Research Citation",
-                        "url": citation,
-                        "tier": tier,
-                        "weight": weight * 1.1,
-                    })
+                    try:
+                        tier, weight = self._tier_for_domain(citation)
+                        sources.append({
+                            "type": "research",
+                            "title": "Research Citation",
+                            "url": citation,
+                            "tier": tier,
+                            "weight": weight * 1.1,
+                        })
+                    except Exception as e:
+                        logger.warning(f"Invalid citation string format: {citation[:50]}... - {e}")
+                        continue
+                else:
+                    # Log unexpected citation format but don't crash
+                    logger.warning(f"Unexpected citation format: {type(citation).__name__}")
 
         if not sources:
             return {"score": 0.0, "tiers": {}, "top_sources": [], "total": 0}
@@ -530,10 +549,15 @@ class YouComOrchestrator:
                 "Search API error",
                 status_code=exc.response.status_code,
                 payload=exc.response.text,
+                api_type="search",
             ) from exc
         except Exception as exc:
             logger.error("Search API error: %s", exc)
-            raise YouComAPIError("Search API error", payload=str(exc)) from exc
+            raise YouComAPIError(
+                "Search API error",
+                payload=str(exc),
+                api_type="search",
+            ) from exc
 
     @retry(
         stop=stop_after_attempt(3),
@@ -622,10 +646,15 @@ Format the response with clear sections and actionable insights."""
                 "ARI API error",
                 status_code=exc.response.status_code,
                 payload=exc.response.text,
+                api_type="ari",
             ) from exc
         except Exception as exc:
             logger.error("ARI API error: %s", exc)
-            raise YouComAPIError("ARI API error", payload=str(exc)) from exc
+            raise YouComAPIError(
+                "ARI API error",
+                payload=str(exc),
+                api_type="ari",
+            ) from exc
 
     @retry(
         stop=stop_after_attempt(3),
@@ -685,10 +714,15 @@ Format the response with clear sections and actionable insights."""
                 "News API error",
                 status_code=exc.response.status_code,
                 payload=exc.response.text,
+                api_type="news",
             ) from exc
         except Exception as exc:
             logger.error("News API error: %s", exc)
-            raise YouComAPIError("News API error", payload=str(exc)) from exc
+            raise YouComAPIError(
+                "News API error",
+                payload=str(exc),
+                api_type="news",
+            ) from exc
 
     @retry(
         stop=stop_after_attempt(3),
@@ -754,10 +788,15 @@ Format the response with clear sections and actionable insights."""
                 "Chat API error",
                 status_code=exc.response.status_code,
                 payload=exc.response.text,
+                api_type="chat",
             ) from exc
         except Exception as exc:
             logger.error("Chat API error: %s", exc)
-            raise YouComAPIError("Chat API error", payload=str(exc)) from exc
+            raise YouComAPIError(
+                "Chat API error",
+                payload=str(exc),
+                api_type="chat",
+            ) from exc
 
     def _create_analysis_prompt(self, news_data: Dict, context_data: Dict, competitor: str) -> str:
         """Create structured prompt for competitive analysis"""
