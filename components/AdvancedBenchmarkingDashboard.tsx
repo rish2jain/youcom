@@ -473,9 +473,7 @@ export function AdvancedBenchmarkingDashboard() {
                         : `${value}s`,
                       name === "accuracy" ? "Accuracy" : "Response Time",
                     ]}
-                    labelFormatter={(label, payload) =>
-                      payload?.[0]?.payload?.competitor || "Unknown"
-                    }
+                    labelFormatter={(label) => label}
                   />
                   <Scatter
                     name="Competitors"
@@ -521,7 +519,7 @@ export function AdvancedBenchmarkingDashboard() {
                       : name === "detection_speed"
                       ? `${Number(value).toFixed(1)}m`
                       : `${Math.round(Number(value) * 100)}%`,
-                    name.replace("_", " ").toUpperCase(),
+                    String(name).replace("_", " ").toUpperCase(),
                   ]}
                 />
                 <Legend />

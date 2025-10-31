@@ -147,7 +147,7 @@ export function ObsidianIntegrationSetup() {
 
   const toggleSyncMutation = useMutation({
     mutationFn: (enabled: boolean) =>
-      api.patch("/api/v1/obsidian_integration/", { sync_enabled: enabled }),
+      api.put("/api/v1/obsidian_integration/", { sync_enabled: enabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["obsidianIntegration"] });
     },
@@ -406,8 +406,8 @@ export function ObsidianIntegrationSetup() {
                         placeholder="Note template with {{variables}}"
                       />
                       <p className="text-xs text-gray-500 mt-2">
-                        Use variables like {{ company_name }}, {{ description }}
-                        , {{ intelligence_data }}
+                        Use variables like{" "}
+                        {`{{ company_name }}, {{ description }}, {{ intelligence_data }}`}
                       </p>
                     </div>
                   ))}

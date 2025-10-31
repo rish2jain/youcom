@@ -477,14 +477,14 @@ class HubSpotSyncService:
 
 
 # Utility functions for external use
-async def get_integration_by_workspace(workspace_id: UUID, db: AsyncSession) -> Optional[HubSpotIntegration]:
+async def get_integration_by_workspace(workspace_id: int, db: AsyncSession) -> Optional[HubSpotIntegration]:
     """Get HubSpot integration for a workspace"""
     query = select(HubSpotIntegration).where(HubSpotIntegration.workspace_id == workspace_id)
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
 
-async def create_sync_service(workspace_id: UUID, db: AsyncSession) -> Optional[HubSpotSyncService]:
+async def create_sync_service(workspace_id: int, db: AsyncSession) -> Optional[HubSpotSyncService]:
     """Create a sync service for a workspace"""
     integration = await get_integration_by_workspace(workspace_id, db)
     if not integration or not integration.sync_enabled:

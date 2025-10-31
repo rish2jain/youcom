@@ -187,7 +187,7 @@ class MarketplaceIntegrationInstallation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     integration_id = Column(Integer, ForeignKey("marketplace_integrations.id"), index=True)
-    user_id = Column(String, index=True)  # CIA platform user ID
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)  # CIA platform user ID
     workspace_id = Column(String, nullable=True, index=True)  # For enterprise workspaces
     
     # Installation Details
@@ -222,7 +222,7 @@ class IntegrationReview(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     integration_id = Column(Integer, ForeignKey("marketplace_integrations.id"), index=True)
-    user_id = Column(String, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     
     # Review Content
     rating = Column(Integer, nullable=False)  # 1-5 stars
@@ -359,7 +359,7 @@ class IntegrationSupport(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     integration_id = Column(Integer, ForeignKey("marketplace_integrations.id"), index=True)
-    user_id = Column(String, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     
     # Ticket Details
     ticket_number = Column(String, unique=True, nullable=False)

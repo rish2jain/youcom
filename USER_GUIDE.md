@@ -1,53 +1,80 @@
 # Enterprise CIA - User Guide
 
 **Last Updated**: October 30, 2025  
-**Version**: 2.0 - Complete Feature Guide
+**Version**: 3.0 - Complete Platform with Professional UX
 
 ## 🎯 Overview
 
-Enterprise CIA is an AI-powered competitive intelligence platform that serves both **individual users** and **enterprise teams**. This guide covers all features across four main modes: Individual Research, Enterprise Monitoring, Analytics, and Integrations.
+Enterprise CIA is a **complete, professional** competitive intelligence platform with intuitive UX and comprehensive workflows. The platform features a modern left sidebar navigation, visual components, and mobile-responsive design suitable for both individual users and enterprise teams.
+
+**🌟 New in Version 3.0**: Complete UX transformation with professional interface, visual workflows, timeline analysis, evidence scoring, and mobile-responsive design.
 
 ## 🚀 Getting Started
 
 ### Quick Setup
 
-1. **Access the Platform**: Navigate to http://localhost:3456
-2. **Choose Your Mode**: Select from Individual, Enterprise, Analytics, or Integrations
-3. **Add API Key**: Ensure You.com API key is configured for full functionality
+1. **Access the Platform**: Navigate to http://localhost:3000
+2. **Professional Interface**: Use left sidebar navigation with clear icons and categories
+3. **Data Source**: Toggle between "Demo Data" and "Live Data" modes
+4. **Sample Content**: Explore pre-loaded playbooks, actions, and demo workflows
 
-### User Roles
+### Navigation Overview
 
-- **Individual User**: Company research, competitor analysis, report generation
-- **Team Member**: Shared workspaces, collaborative monitoring
-- **Analyst**: Advanced analytics, predictive insights
-- **Admin**: User management, integrations, compliance
+**Left Sidebar Navigation**:
 
-## 📊 Individual Research Mode
+- 📊 **Dashboard**: Main overview with all components
+- 🔍 **Research**: Individual company analysis
+- ⚡ **Monitoring**: Real-time competitive tracking
+- 📈 **Analytics**: Predictive insights and trends
+- ⚙️ **Integrations**: Connect external tools
+- 🎯 **Settings**: Preferences and playbooks
 
-### Company Research
+### User Experience Features
 
-**Purpose**: Generate comprehensive company profiles instantly
+- **Professional Design**: Clean, modern interface suitable for C-suite presentations
+- **Mobile Responsive**: Touch-friendly design works on all devices
+- **Visual Workflows**: Interactive flowcharts showing API orchestration
+- **Loading States**: Rich feedback with progress indicators and success notifications
+- **Sample Data**: Pre-loaded content for immediate value demonstration
+
+## 🔍 Company Research
+
+### Individual Research Workflow
+
+**Purpose**: Generate comprehensive company profiles instantly with professional presentation
 
 **How to Use**:
 
-1. Navigate to "Individual Research" tab
-2. Enter company name (e.g., "Perplexity AI")
-3. Click "Research Company"
-4. Watch real-time processing: Search API → ARI API
-5. Review comprehensive profile with 400+ sources
+1. **Navigate**: Click "Research" in left sidebar
+2. **Enter Company**: Type company name (e.g., "Perplexity AI")
+3. **Watch Processing**: Real-time progress with Search API → ARI API
+4. **Review Results**: Comprehensive profile with 400+ sources
+5. **Export**: Professional PDF reports ready for presentations
 
-**Features**:
+**New UX Features**:
 
-- **Instant Profiles**: Complete company analysis in <2 minutes
-- **Investment Insights**: Funding history, market positioning, growth signals
-- **Competitor Discovery**: Automatic identification of key competitors
-- **Export Options**: PDF reports, email sharing, markdown export
+- **Visual Progress**: Step-by-step processing indicators
+- **Professional Layout**: Clean, organized information display
+- **Mobile Friendly**: Works perfectly on tablets and phones
+- **Quick Actions**: One-click export and sharing options
 
 ### Research Reports
 
 **Generated Content**:
 
 - Company overview and business model
+- Funding history and financial insights
+- Market positioning and competitive landscape
+- Growth signals and strategic initiatives
+- Key personnel and leadership analysis
+- Recent news and developments
+
+**Professional Output**:
+
+- **PDF Reports**: Presentation-ready with professional formatting
+- **Executive Summary**: Key insights for C-suite consumption
+- **Source Attribution**: Full transparency with 400+ sources
+- **Visual Elements**: Charts, timelines, and infographics
 - Recent funding rounds and financial health
 - Market positioning and competitive landscape
 - Key executives and team information
@@ -316,7 +343,7 @@ Enterprise CIA is an AI-powered competitive intelligence platform that serves bo
 
 ### Enterprise Teams
 
-- **Efficiency Gains**: 10+ hours saved per PM per week
+- **Efficiency Gains**: Automated competitive intelligence workflows
 - **Detection Speed**: <5 minutes vs 5-7 days manual
 - **Accuracy**: 85%+ impact classification accuracy
 - **Team Adoption**: Multi-user workspace utilization

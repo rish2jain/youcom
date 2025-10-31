@@ -111,10 +111,14 @@ export function SentimentTrendChart({
 
   const avgVolatility =
     trends.length > 0
-      ? trends.reduce((sum, trend) => sum + trend.volatility, 0) / trends.length
+      ? trends.reduce((sum: number, trend: any) => sum + trend.volatility, 0) /
+        trends.length
       : 0;
 
-  const totalMentions = trends.reduce((sum, trend) => sum + trend.volume, 0);
+  const totalMentions = trends.reduce(
+    (sum: number, trend: any) => sum + trend.volume,
+    0
+  );
 
   const getSentimentColor = (score: number) => {
     if (score > 0.2) return "#10b981"; // green
@@ -139,7 +143,7 @@ export function SentimentTrendChart({
   };
 
   const renderChart = () => {
-    const chartData = trends.map((trend) => ({
+    const chartData = trends.map((trend: any) => ({
       ...trend,
       date: new Date(trend.timestamp).toLocaleDateString(),
       time: new Date(trend.timestamp).toLocaleTimeString(),
@@ -163,7 +167,8 @@ export function SentimentTrendChart({
                 name === "volume" ? value : formatSentimentScore(Number(value)),
                 name === "volume"
                   ? "Volume"
-                  : name.charAt(0).toUpperCase() + name.slice(1),
+                  : String(name).charAt(0).toUpperCase() +
+                    String(name).slice(1),
               ]}
             />
             <Legend />
@@ -235,7 +240,8 @@ export function SentimentTrendChart({
                 name === "volume" ? value : formatSentimentScore(Number(value)),
                 name === "volume"
                   ? "Volume"
-                  : name.charAt(0).toUpperCase() + name.slice(1),
+                  : String(name).charAt(0).toUpperCase() +
+                    String(name).slice(1),
               ]}
             />
             <Legend />

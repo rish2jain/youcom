@@ -49,7 +49,7 @@ class CommunityUser(Base):
     __tablename__ = "community_users"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, ForeignKey("users.id"), unique=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
     
     # Reputation System
     reputation_score = Column(Integer, default=0)

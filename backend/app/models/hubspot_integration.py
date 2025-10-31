@@ -16,7 +16,7 @@ class HubSpotIntegration(Base):
     __tablename__ = "hubspot_integrations"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=False)
     
     # HubSpot account information
     hubspot_portal_id = Column(String(50), nullable=False)
@@ -137,7 +137,7 @@ class HubSpotWorkflowTrigger(Base):
     hubspot_object_id = Column(String(50), nullable=False)
     
     # CIA context
-    impact_card_id = Column(UUID(as_uuid=True), ForeignKey("impact_cards.id"))
+    impact_card_id = Column(Integer, ForeignKey("impact_cards.id"))
     competitive_event_type = Column(String(100))
     risk_score = Column(Integer)
     

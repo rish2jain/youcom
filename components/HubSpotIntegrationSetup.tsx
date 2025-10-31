@@ -7,11 +7,10 @@ import {
   CheckCircle,
   AlertTriangle,
   Settings,
-  Sync,
+  RefreshCw,
   Key,
   Users,
   Workflow,
-  RefreshCw,
 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -108,7 +107,7 @@ export function HubSpotIntegrationSetup() {
 
   const toggleSyncMutation = useMutation({
     mutationFn: (enabled: boolean) =>
-      api.patch("/api/v1/hubspot_integration/", { sync_enabled: enabled }),
+      api.put("/api/v1/hubspot_integration/", { sync_enabled: enabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hubspotIntegration"] });
     },
@@ -249,7 +248,7 @@ export function HubSpotIntegrationSetup() {
                 </p>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <Sync className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+                <RefreshCw className="w-8 h-8 mx-auto mb-2 text-purple-600" />
                 <h5 className="font-semibold text-gray-900 mb-1">
                   Real-time Sync
                 </h5>
@@ -459,19 +458,21 @@ export function HubSpotIntegrationSetup() {
                 Custom Properties Created
               </h5>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {integrationData.custom_properties_created.map((property) => (
-                  <div
-                    key={property}
-                    className="p-3 bg-green-50 rounded-lg border border-green-200"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {property}
-                      </span>
+                {integrationData.custom_properties_created.map(
+                  (property: string) => (
+                    <div
+                      key={property}
+                      className="p-3 bg-green-50 rounded-lg border border-green-200"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {property}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </div>
 
@@ -492,7 +493,7 @@ export function HubSpotIntegrationSetup() {
                           {trigger.replace("_", " ")}
                         </span>
                         <span className="text-sm text-gray-600">
-                          Workflow ID: {workflowId}
+                          Workflow ID: {String(workflowId)}
                         </span>
                       </div>
                     )

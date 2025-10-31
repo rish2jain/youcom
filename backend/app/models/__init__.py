@@ -15,7 +15,7 @@ from .shared_watchlist import SharedWatchlist  # noqa: F401
 from .comment import Comment  # noqa: F401
 from .audit_log import AuditLog, AuditAction  # noqa: F401
 from .dashboard import Dashboard, ScheduledReport  # noqa: F401
-from .integration import Integration, IntegrationUsageLog  # noqa: F401
+from .integration import Integration, IntegrationUsageLog, BasicIntegrationReview  # noqa: F401
 
 # Week 4 models - Community Platform
 from .community import (  # noqa: F401
@@ -68,3 +68,7 @@ from .hubspot_integration import (  # noqa: F401
 from .obsidian_integration import (  # noqa: F401
     ObsidianIntegration, ObsidianSyncLog, ObsidianNoteMapping, ObsidianNoteTemplate
 )
+
+# Timeline and Action Tracking
+from .insight_timeline import InsightTimeline  # noqa: F401
+from .action_tracker import ActionItem  # noqa: F401

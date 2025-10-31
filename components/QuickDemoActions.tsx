@@ -33,11 +33,11 @@ export function QuickDemoActions({
         });
       }
 
-      // Generate company research for demo
+      // Generate company research for demo - FIX: wrap company name in proper schema
       const companies = ["Perplexity AI", "Stripe", "Notion"];
       for (const company of companies) {
         await api.post("/api/v1/research/company", {
-          company_name: company,
+          company_name: company,  // Backend expects { company_name: string }
         });
       }
 

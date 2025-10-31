@@ -45,7 +45,7 @@ class TemplateApplication(Base):
     id = Column(Integer, primary_key=True, index=True)
     template_id = Column(Integer, ForeignKey("industry_templates.id"), nullable=False, index=True)
     workspace_id = Column(String(255), nullable=False, index=True)
-    user_id = Column(String(255), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     customizations = Column(JSON)  # User-specific customizations to the template
     applied_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     status = Column(String(50), default="active", index=True)  # active, modified, archived

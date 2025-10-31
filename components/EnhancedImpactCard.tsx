@@ -386,12 +386,14 @@ const EnhancedImpactCard: React.FC<EnhancedImpactCardProps> = ({
         {/* Actions Tab */}
         <TabsContent value="actions">
           <ActionTracker
-            impactCardId={impactCard.id}
-            userId={userId}
-            viewMode="list"
-            showSummary={true}
-            onActionUpdate={(action) => {
-              console.log("Action updated:", action);
+            onGenerateActions={async () => {
+              console.log("Generating actions for impact card:", impactCard.id);
+            }}
+            onAddCustomAction={() => {
+              console.log(
+                "Adding custom action for impact card:",
+                impactCard.id
+              );
             }}
           />
         </TabsContent>
@@ -399,14 +401,11 @@ const EnhancedImpactCard: React.FC<EnhancedImpactCardProps> = ({
         {/* Playbooks Tab */}
         <TabsContent value="playbooks">
           <PersonalPlaybooks
-            userId={userId}
-            currentContext={{
-              user_type: "enterprise",
-              task_type: "competitive_monitoring",
-              experience_level: "medium",
+            onSelectPlaybook={(playbookId) => {
+              console.log("Playbook selected:", playbookId);
             }}
-            onPlaybookExecute={(playbookId, targetCompany) => {
-              console.log("Playbook executed:", playbookId, targetCompany);
+            onCreatePlaybook={() => {
+              console.log("Creating new playbook");
             }}
           />
         </TabsContent>

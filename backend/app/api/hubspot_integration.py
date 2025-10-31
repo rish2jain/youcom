@@ -142,7 +142,7 @@ async def create_integration(
 
 @router.get("/integrations/{workspace_id}", response_model=HubSpotIntegrationResponse)
 async def get_integration(
-    workspace_id: UUID,
+    workspace_id: int,
     db: AsyncSession = Depends(get_db)
 ):
     """Get HubSpot integration for a workspace"""

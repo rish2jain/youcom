@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart,
@@ -12,6 +13,9 @@ import {
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
+  Legend,
 } from "recharts";
 import { Activity, Zap, TrendingUp, Clock } from "lucide-react";
 import { api } from "@/lib/api";
@@ -34,9 +38,15 @@ interface ApiUsageMetrics {
 }
 
 export function APIUsageDashboard() {
+  const [dateRange, setDateRange] = useState("24h");
+  const [selectedAPI, setSelectedAPI] = useState<string | null>(null);
+
   const { data, isLoading, error } = useQuery<ApiUsageMetrics>({
-    queryKey: ["apiUsageMetrics"],
-    queryFn: () => api.get("/api/v1/metrics/api-usage").then((res) => res.data),
+    queryKey: ["apiUsageMetrics", dateRange],
+    queryFn: () =>
+      api
+        .get(`/api/v1/metrics/api-usage?range=${dateRange}`)
+        .then((res) => res.data),
     staleTime: 60 * 1000,
   });
 
@@ -46,22 +56,22 @@ export function APIUsageDashboard() {
     ? [
         {
           name: "News API",
-          calls: metrics.by_service.news ?? 0,
+          calls: metrics.by_service?.news ?? 0,
           color: "#3b82f6",
         },
         {
           name: "Search API",
-          calls: metrics.by_service.search ?? 0,
+          calls: metrics.by_service?.search ?? 0,
           color: "#10b981",
         },
         {
           name: "Chat API",
-          calls: metrics.by_service.chat ?? 0,
+          calls: metrics.by_service?.chat ?? 0,
           color: "#8b5cf6",
         },
         {
           name: "ARI API",
-          calls: metrics.by_service.ari ?? 0,
+          calls: metrics.by_service?.ari ?? 0,
           color: "#f59e0b",
         },
       ]
@@ -92,12 +102,61 @@ export function APIUsageDashboard() {
             You.com API Usage Dashboard
           </h3>
         </div>
-        <div className="you-api-badge">Live Demo Metrics</div>
+        <div className="flex items-center space-x-4">
+          {/* Date Range Picker */}
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+          >
+            <option value="24h">Last 24 Hours</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="90d">Last 90 Days</option>
+          </select>
+
+          <div className="you-api-badge">Live Demo Metrics</div>
+        </div>
       </div>
 
       {errorMessage && (
-        <div className="mb-4 p-3 border border-red-200 bg-red-50 text-sm text-red-700 rounded-lg">
-          {errorMessage}
+        <div className="mb-4 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Activity className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              ✨ API Usage Metrics
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Your API calls will appear here once you start using the platform
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="bg-white p-3 rounded-lg shadow-sm">
+                <div className="text-blue-600 font-semibold">News API</div>
+                <div className="text-xs text-gray-500">
+                  Real-time monitoring
+                </div>
+              </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm">
+                <div className="text-green-600 font-semibold">Search API</div>
+                <div className="text-xs text-gray-500">Context retrieval</div>
+              </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm">
+                <div className="text-purple-600 font-semibold">
+                  Custom Agents
+                </div>
+                <div className="text-xs text-gray-500">Impact analysis</div>
+              </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm">
+                <div className="text-orange-600 font-semibold">ARI Reports</div>
+                <div className="text-xs text-gray-500">Deep research</div>
+              </div>
+            </div>
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              Refresh Metrics
+            </button>
+          </div>
         </div>
       )}
 
@@ -119,7 +178,7 @@ export function APIUsageDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div className="p-4 bg-blue-50 rounded-lg text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {metrics.total_calls}
+                {metrics?.total_calls || 0}
               </div>
               <div className="text-sm text-gray-600">Total API Calls</div>
               <div className="text-xs text-gray-500 mt-1">
@@ -129,19 +188,19 @@ export function APIUsageDashboard() {
 
             <div className="p-4 bg-orange-50 rounded-lg text-center">
               <div className="text-2xl font-bold text-orange-600">
-                {metrics.impact_cards}
+                {metrics?.impact_cards || 0}
               </div>
               <div className="text-sm text-gray-600">
                 Impact Cards Generated
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                Company research: {metrics.company_research}
+                Company research: {metrics?.company_research || 0}
               </div>
             </div>
 
             <div className="p-4 bg-green-50 rounded-lg text-center">
               <div className="text-2xl font-bold text-green-600">
-                {metrics.success_rate !== null
+                {metrics?.success_rate !== null
                   ? `${(metrics.success_rate * 100).toFixed(1)}%`
                   : "—"}
               </div>
@@ -153,14 +212,14 @@ export function APIUsageDashboard() {
 
             <div className="p-4 bg-purple-50 rounded-lg text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {metrics.p95_latency_ms !== null
+                {metrics?.p95_latency_ms !== null
                   ? `${metrics.p95_latency_ms.toFixed(0)} ms`
                   : "—"}
               </div>
               <div className="text-sm text-gray-600">p95 Latency</div>
               <div className="text-xs text-gray-500 mt-1">
                 p99:{" "}
-                {metrics.p99_latency_ms !== null
+                {metrics?.p99_latency_ms !== null
                   ? `${metrics.p99_latency_ms.toFixed(0)} ms`
                   : "—"}
               </div>
@@ -189,15 +248,37 @@ export function APIUsageDashboard() {
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="calls"
+                        onMouseEnter={(data, index) =>
+                          setSelectedAPI(data.name)
+                        }
+                        onMouseLeave={() => setSelectedAPI(null)}
                       >
                         {apiData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={entry.color}
+                            stroke={
+                              selectedAPI === entry.name ? "#1f2937" : "none"
+                            }
+                            strokeWidth={selectedAPI === entry.name ? 3 : 0}
+                          />
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value, name) => [`${value} calls`, name]}
+                        formatter={(value: number, name: string) => [
+                          `${value.toLocaleString()} calls`,
+                          name,
+                        ]}
+                        labelFormatter={() => `API Usage (${dateRange})`}
                       />
-                      <Legend />
+                      <Legend
+                        onClick={(data) =>
+                          setSelectedAPI(
+                            selectedAPI === data.value ? null : data.value
+                          )
+                        }
+                        wrapperStyle={{ cursor: "pointer" }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -362,7 +443,7 @@ export function APIUsageDashboard() {
                 <div>• Competitor alerts</div>
                 <div>• News ingestion</div>
                 <div className="font-medium text-blue-600">
-                  {metrics.by_service.news ?? 0} calls total
+                  {metrics?.by_service?.news ?? 0} calls total
                 </div>
               </div>
             </div>
@@ -377,7 +458,7 @@ export function APIUsageDashboard() {
                 <div>• Company profiles</div>
                 <div>• Background research</div>
                 <div className="font-medium text-green-600">
-                  {metrics.by_service.search ?? 0} calls total
+                  {metrics?.by_service?.search ?? 0} calls total
                 </div>
               </div>
             </div>
@@ -392,7 +473,7 @@ export function APIUsageDashboard() {
                 <div>• Impact analysis</div>
                 <div>• Risk scoring</div>
                 <div className="font-medium text-purple-600">
-                  {metrics.by_service.chat ?? 0} calls total
+                  {metrics?.by_service?.chat ?? 0} calls total
                 </div>
               </div>
             </div>
@@ -407,7 +488,7 @@ export function APIUsageDashboard() {
                 <div>• 400+ sources</div>
                 <div>• Comprehensive reports</div>
                 <div className="font-medium text-orange-600">
-                  {metrics.by_service.ari ?? 0} calls total
+                  {metrics?.by_service?.ari ?? 0} calls total
                 </div>
               </div>
             </div>
@@ -447,7 +528,7 @@ export function APIUsageDashboard() {
                   WebSocket integration streams live progress; company research
                   records:{" "}
                   <span className="font-medium text-gray-900">
-                    {metrics.company_research}
+                    {metrics?.company_research || 0}
                   </span>
                 </div>
               </div>

@@ -15,6 +15,9 @@ class CompanyResearch(CompanyResearchBase):
     id: int
     search_results: Dict[str, Any]
     research_report: Dict[str, Any]
+    status: str = "completed"
+    summary: Optional[str] = None
+    confidence_score: int = 85
     total_sources: int
     api_usage: Dict[str, Any]
     created_at: datetime

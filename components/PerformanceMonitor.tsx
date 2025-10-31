@@ -19,15 +19,29 @@ export function PerformanceMonitor() {
   });
 
   useEffect(() => {
-    // Simulate performance monitoring
-    const interval = setInterval(() => {
-      setMetrics((prev) => ({
-        apiResponseTime: Math.random() * 2000 + 500, // 500-2500ms
-        successRate: 95 + Math.random() * 5, // 95-100%
-        totalRequests: prev.totalRequests + Math.floor(Math.random() * 3),
-        lastUpdated: new Date().toISOString(),
-      }));
-    }, 5000);
+    // Fetch real performance metrics from usage tracker
+    const fetchMetrics = async () => {
+      try {
+        const response = await fetch("/api/v1/metrics/api-usage?range=24h");
+        const data = await response.json();
+
+        setMetrics({
+          apiResponseTime: data.average_latency_ms || 0,
+          successRate: data.success_rate || 100,
+          totalRequests: data.total_calls || 0,
+          lastUpdated: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.warn("Failed to fetch performance metrics:", error);
+        // Keep previous metrics on error
+      }
+    };
+
+    // Initial fetch
+    fetchMetrics();
+
+    // Update every 30 seconds
+    const interval = setInterval(fetchMetrics, 30000);
 
     return () => clearInterval(interval);
   }, []);

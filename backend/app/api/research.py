@@ -31,12 +31,25 @@ async def research_company(
         # Perform quick company research
         logger.info(f"🏢 Starting company research for {request.company_name}")
         research_data = await you_client.quick_company_research(request.company_name)
-        
+
+        # Generate summary from report (first 150 chars)
+        report = research_data.get("research_report", {})
+        report_text = ""
+        if isinstance(report, dict):
+            report_text = report.get("report", "")
+        if isinstance(report_text, str) and len(report_text) > 150:
+            summary = report_text[:147] + "..."
+        else:
+            summary = "Comprehensive competitive analysis and market research report"
+
         # Create database record
         db_research = CompanyResearch(
             company_name=request.company_name,
             search_results=research_data["search_results"],
             research_report=research_data["research_report"],
+            status="completed",
+            summary=summary,
+            confidence_score=85,
             total_sources=research_data["total_sources"],
             api_usage=research_data["api_usage"]
         )

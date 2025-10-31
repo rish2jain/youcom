@@ -106,7 +106,7 @@ export function SentimentAlertDashboard() {
 
   const toggleRuleMutation = useMutation({
     mutationFn: ({ ruleId, enabled }: { ruleId: string; enabled: boolean }) =>
-      api.patch(`/api/v1/sentiment/alert-rules/${ruleId}`, { enabled }),
+      api.put(`/api/v1/sentiment/alert-rules/${ruleId}`, { enabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sentimentAlertRules"] });
     },

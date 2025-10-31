@@ -75,13 +75,55 @@ export function IntegrationManager({
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/v1/integrations/?workspace_id=${workspaceId}`
-      );
-      if (!response.ok) throw new Error("Failed to fetch integrations");
+      // For demo purposes, show sample integrations
+      const sampleIntegrations: Integration[] = [
+        {
+          id: 1,
+          name: "Marketing Notion Workspace",
+          type: "notion",
+          is_active: true,
+          is_verified: true,
+          last_sync_at: new Date().toISOString(),
+          total_syncs: 47,
+          successful_syncs: 45,
+          failed_syncs: 2,
+          created_at: new Date(
+            Date.now() - 7 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+        },
+        {
+          id: 2,
+          name: "Sales CRM Integration",
+          type: "salesforce",
+          is_active: true,
+          is_verified: true,
+          last_sync_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          total_syncs: 23,
+          successful_syncs: 23,
+          failed_syncs: 0,
+          created_at: new Date(
+            Date.now() - 14 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+        },
+        {
+          id: 3,
+          name: "Team Slack Notifications",
+          type: "slack",
+          is_active: false,
+          is_verified: false,
+          last_sync_at: null,
+          total_syncs: 0,
+          successful_syncs: 0,
+          failed_syncs: 0,
+          created_at: new Date(
+            Date.now() - 1 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+        },
+      ];
 
-      const data = await response.json();
-      setIntegrations(data);
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setIntegrations(sampleIntegrations);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load integrations"
@@ -272,9 +314,11 @@ export function IntegrationManager({
   };
 
   const getSuccessRate = (integration: Integration) => {
-    if (integration.total_syncs === 0) return 0;
-    return Math.round(
-      (integration.successful_syncs / integration.total_syncs) * 100
+    if (integration.total_syncs === 0) return "N/A";
+    return (
+      Math.round(
+        (integration.successful_syncs / integration.total_syncs) * 100
+      ) + "%"
     );
   };
 
@@ -466,7 +510,7 @@ export function IntegrationManager({
                 <div className="flex items-center justify-between text-sm">
                   <span>Success Rate:</span>
                   <span className="font-medium">
-                    {getSuccessRate(integration)}%
+                    {getSuccessRate(integration)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">

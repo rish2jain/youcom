@@ -15,7 +15,7 @@ import statistics
 
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
-from sqlalchemy import select, func
+from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings

@@ -1,0 +1,91 @@
+{
+  "scenario_name": "market_expansion",
+  "description": "Track competitor expansion into new markets or verticals",
+  "duration_seconds": 40,
+  "config": {
+    "competitor": "Anthropic",
+    "search_terms": [
+      "Anthropic enterprise partnerships",
+      "Anthropic market expansion",
+      "Claude enterprise deals"
+    ],
+    "analysis_focus": "market_expansion",
+    "expected_insights": [
+      "market_entry_signals",
+      "partnership_announcements",
+      "competitive_positioning",
+      "threat_level",
+      "defensive_actions"
+    ],
+    "demo_mode": false
+  },
+  "timeline": [
+    {
+      "timestamp": 0,
+      "action": "scroll",
+      "target": "impact_cards",
+      "distance": 600,
+      "duration": 2,
+      "narration": "Monitoring Anthropic's market moves"
+    },
+    {
+      "timestamp": 5,
+      "action": "highlight",
+      "target": "expansion_card",
+      "narration": "Enterprise partnership detected"
+    },
+    {
+      "timestamp": 10,
+      "action": "click",
+      "target": "expansion_card",
+      "narration": "Analyzing market implications..."
+    },
+    {
+      "timestamp": 13,
+      "action": "wait",
+      "target": "search_results",
+      "narration": "Search API enriching with market data"
+    },
+    {
+      "timestamp": 18,
+      "action": "click",
+      "target": "analysis_tab",
+      "narration": "Strategic threat assessment"
+    },
+    {
+      "timestamp": 23,
+      "action": "wait",
+      "target": "threat_level",
+      "narration": "Impact: High threat to enterprise segment"
+    },
+    {
+      "timestamp": 28,
+      "action": "click",
+      "target": "actions_tab",
+      "narration": "Defensive strategy recommendations"
+    },
+    {
+      "timestamp": 33,
+      "action": "scroll",
+      "target": "actions",
+      "distance": 150,
+      "duration": 1,
+      "narration": "Prioritized response actions"
+    },
+    {
+      "timestamp": 38,
+      "action": "wait",
+      "target": "complete",
+      "narration": "Complete intelligence in 40 seconds"
+    }
+  ],
+  "validation_rules": {
+    "expected_apis": [
+      "news",
+      "search",
+      "chat",
+      "ari"
+    ],
+    "max_duration": 60.0
+  }
+}

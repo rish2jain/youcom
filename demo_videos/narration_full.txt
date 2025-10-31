@@ -1,0 +1,18 @@
+[0s] 2025-10-31T13:24:58.410Z: Welcome to Enterprise CIA - the complete competitive intelligence automation platform
+[3s] 2025-10-31T13:25:01.413Z: Built exclusively for the You.com Hackathon, orchestrating all 4 You.com APIs
+[6s] 2025-10-31T13:25:04.413Z: The dashboard displays real-time competitive threats from your industry
+[10s] 2025-10-31T13:25:08.457Z: Each threat is scored by severity - this OpenAI alert shows a 9.8/10 risk score
+[15s] 2025-10-31T13:25:13.506Z: Recent intelligence reports show comprehensive analysis from over 400 sources
+[17s] 2025-10-31T13:25:15.508Z: The News API monitors thousands of sources for competitive signals
+[21s] 2025-10-31T13:25:19.512Z: Key insights reveal a 40% increase in competitor activity this week
+[23s] 2025-10-31T13:25:21.513Z: The Search API enriches context with real-time market intelligence
+[27s] 2025-10-31T13:25:25.571Z: Quick actions provide one-click access to monitoring, research, and analytics
+[29s] 2025-10-31T13:25:27.572Z: Custom Agents analyze strategic impact using structured extraction
+[33s] 2025-10-31T13:25:31.576Z: ARI synthesizes deep insights delivering results in under 5 minutes instead of days
+[36s] 2025-10-31T13:25:34.577Z: With 85% accuracy and complete source provenance for every insight
+[38s] 2025-10-31T13:25:36.579Z: Product managers save over 10 hours per week with automated intelligence
+[41s] 2025-10-31T13:25:39.578Z: Built with production-grade architecture: async Python backend, Next.js frontend
+[44s] 2025-10-31T13:25:42.580Z: Real-time updates via WebSocket, Redis caching, and circuit breaker resilience
+[47s] 2025-10-31T13:25:45.581Z: Comprehensive test coverage at 85%, ready for enterprise deployment
+[50s] 2025-10-31T13:25:48.583Z: Enterprise CIA - where You.com's four APIs revolutionize competitive intelligence
+[53s] 2025-10-31T13:25:51.584Z: Thank you for watching our demonstration

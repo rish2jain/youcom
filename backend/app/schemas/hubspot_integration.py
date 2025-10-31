@@ -33,7 +33,7 @@ class HubSpotTokenExchange(BaseModel):
 
 class HubSpotIntegrationCreate(BaseModel):
     """Request to create HubSpot integration"""
-    workspace_id: UUID = Field(..., description="Workspace ID")
+    workspace_id: int = Field(..., description="Workspace ID")
     hubspot_portal_id: str = Field(..., description="HubSpot portal ID")
     hubspot_account_name: Optional[str] = Field(None, description="HubSpot account name")
     access_token: str = Field(..., description="HubSpot access token")
@@ -54,7 +54,7 @@ class HubSpotIntegrationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     id: UUID
-    workspace_id: UUID
+    workspace_id: int
     hubspot_portal_id: str
     hubspot_account_name: Optional[str]
     sync_enabled: bool

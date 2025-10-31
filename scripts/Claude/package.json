@@ -1,0 +1,34 @@
+{
+  "name": "enterprise-cia-demo-recorder",
+  "version": "2.0.0",
+  "description": "Automated demo video recorder for Enterprise CIA with native video recording",
+  "main": "improved_demo_recorder.js",
+  "scripts": {
+    "record": "node improved_demo_recorder.js",
+    "record:hd": "node improved_demo_recorder.js --width 1920 --height 1080 --fps 30",
+    "record:4k": "node improved_demo_recorder.js --width 3840 --height 2160 --fps 60",
+    "record:quick": "node improved_demo_recorder.js --width 1280 --height 720 --fps 24",
+    "record:system": "node system_level_recorder.js --quality high --fps 30",
+    "record:system:ultra": "node system_level_recorder.js --quality ultra --fps 60",
+    "record:system:quick": "node system_level_recorder.js --quality medium --fps 24"
+  },
+  "keywords": [
+    "demo",
+    "recorder",
+    "puppeteer",
+    "automation",
+    "video"
+  ],
+  "author": "Rishabh",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^21.5.0",
+    "puppeteer-screen-recorder": "^3.0.5"
+  },
+  "devDependencies": {
+    "eslint": "^8.54.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

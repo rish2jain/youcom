@@ -173,11 +173,11 @@ export function BenchmarkDrillDown({
 
   const filteredCompetitors = (breakdown.by_competitor || [])
     .filter(
-      (item) =>
+      (item: any) =>
         searchQuery === "" ||
         item.competitor.toLowerCase().includes(searchQuery.toLowerCase())
     )
-    .sort((a, b) => {
+    .sort((a: any, b: any) => {
       switch (sortBy) {
         case "value":
           return b.value - a.value;
@@ -304,7 +304,7 @@ export function BenchmarkDrillDown({
 
           {/* Competitor List */}
           <div className="space-y-3">
-            {filteredCompetitors.map((competitor, index) => (
+            {filteredCompetitors.map((competitor: any, index: number) => (
               <div
                 key={competitor.competitor}
                 className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
@@ -369,24 +369,26 @@ export function BenchmarkDrillDown({
           </div>
 
           <div className="space-y-3">
-            {(breakdown.by_industry || []).map((industry, index) => (
-              <div
-                key={industry.industry}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="font-medium text-gray-900">
-                  {industry.industry}
-                </div>
-                <div className="text-right">
-                  <div className="font-bold">
-                    {formatMetricValue(industry.value, metric)}
+            {(breakdown.by_industry || []).map(
+              (industry: any, index: number) => (
+                <div
+                  key={industry.industry}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="font-medium text-gray-900">
+                    {industry.industry}
                   </div>
-                  <div className="text-xs text-gray-600">
-                    {industry.percentile}th percentile
+                  <div className="text-right">
+                    <div className="font-bold">
+                      {formatMetricValue(industry.value, metric)}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {industry.percentile}th percentile
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
         </div>
       )}

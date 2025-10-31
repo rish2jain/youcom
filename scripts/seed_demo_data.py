@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Seed the database with live data pulled from the You.com APIs."""
+"""Seed the database with current competitive intelligence data using You.com APIs.
+Updated October 2025 with GPT-5, Claude 4, $300B+ valuations, and latest market developments."""
 
 import asyncio
 import os
@@ -24,24 +25,45 @@ from sqlalchemy import delete, select
 COMPETITORS = [
     {
         "name": "OpenAI",
-        "keywords": ["GPT", "ChatGPT", "API", "AI"],
-        "description": "Leading AI lab with ChatGPT and GPT models."
+        "keywords": ["GPT-5", "GPT-5 mini", "o3", "o4-mini", "ChatGPT", "Sora", "Agent Mode"],
+        "description": "AI industry leader with GPT-5 release and $300B valuation driving $13B ARR."
     },
     {
         "name": "Anthropic",
-        "keywords": ["Claude", "AI assistant", "Constitutional AI"],
-        "description": "Safety-focused competitor with Claude family of models."
+        "keywords": ["Claude 4", "Claude Sonnet 4.5", "Claude Code", "Computer Use", "Model Context Protocol"],
+        "description": "AI safety leader with $183B valuation and fastest-growing enterprise AI platform."
     },
     {
-        "name": "Google AI",
-        "keywords": ["Gemini", "Bard", "PaLM", "Search"],
-        "description": "Google's AI division spanning Gemini and enterprise AI tooling."
+        "name": "Cursor",
+        "keywords": ["AI coding", "vibe coding", "Composer", "IDE", "developer tools", "Anysphere"],
+        "description": "Fastest-growing AI startup ever with $9.9B valuation and revolutionary coding experience."
+    },
+    {
+        "name": "Google DeepMind",
+        "keywords": ["Gemini 2.5 Pro", "Gemini 3.0", "Deep Think", "Deep Research", "Veo 3", "NotebookLM"],
+        "description": "Tech giant's unified AI with massive distribution and upcoming Gemini 3.0."
+    },
+    {
+        "name": "Perplexity AI",
+        "keywords": ["AI search", "Comet browser", "Pro Search", "Shopping Hub", "Perplexity Assistant"],
+        "description": "AI-powered search challenger reaching $20B valuation with 780M+ monthly queries."
+    },
+    {
+        "name": "Databricks",
+        "keywords": ["Data Intelligence Platform", "IPO", "Mosaic ML", "Apache Spark", "AI platform"],
+        "description": "Data and AI giant valued at $100B+ preparing for blockbuster IPO with $3.7B ARR."
     },
 ]
 
 RESEARCH_TARGETS = [
-    "Perplexity AI",
+    "Databricks",
+    "Scale AI", 
+    "Canva",
+    "Notion",
+    "Figma",
     "Stripe",
+    "Airtable",
+    "Linear",
 ]
 
 

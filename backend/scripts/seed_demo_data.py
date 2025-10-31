@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Demo Data Seeding Script
-Populates database with impressive sample data for hackathon demo
+Populates database with current, realistic competitive intelligence data
+Updated October 2025 with latest AI landscape including GPT-5, Claude 4, $300B+ valuations
 """
 
 import asyncio
@@ -26,79 +27,122 @@ from app.services.auth_service import AuthService
 from app.database import Base
 from app.config import settings
 
-# Impressive demo data
+# Current competitive landscape data (Updated October 2025)
 DEMO_COMPETITORS = [
     {
         "name": "OpenAI",
-        "keywords": ["GPT-5", "ChatGPT", "API", "DALL-E", "GPT-4 Turbo"],
-        "description": "Leading AI research company - track product launches and API updates",
-        "risk_score": 85,
+        "keywords": ["GPT-5", "GPT-5 mini", "GPT-5 nano", "o3", "o4-mini", "ChatGPT", "Sora", "Agent Mode"],
+        "description": "AI industry leader with GPT-5 release and massive enterprise adoption driving $13B ARR",
+        "risk_score": 98,
         "risk_level": "critical",
-        "impact_summary": "OpenAI launched GPT-4 Turbo with 128K context window, significantly expanding capabilities. Major competitive threat to existing LLM providers.",
-        "total_sources": 156
+        "impact_summary": "OpenAI released GPT-5 in August 2025, achieving state-of-the-art performance across coding, math, and multimodal tasks. Company raised $40B at $300B valuation (March 2025), reaching $13B ARR with 5M paid business users. GPT-5 unifies reasoning capabilities and sets new benchmarks: 94.6% on AIME 2025, 74.9% on SWE-bench Verified. Dominates enterprise market with adoption by Cursor, Vercel, Factory, JetBrains. 6x reduction in hallucinations vs o3. Represents existential competitive threat.",
+        "total_sources": 487
     },
     {
         "name": "Anthropic",
-        "keywords": ["Claude", "Claude 2", "AI safety", "Constitutional AI"],
-        "description": "AI safety-focused competitor with strong enterprise traction",
-        "risk_score": 72,
-        "risk_level": "high",
-        "impact_summary": "Anthropic raised $450M Series C, now valued at $4.5B. Claude 2 showing strong enterprise adoption with 100K context window.",
-        "total_sources": 124
+        "keywords": ["Claude 4", "Claude Sonnet 4.5", "Claude Code", "Computer Use", "Model Context Protocol"],
+        "description": "AI safety leader with $183B valuation and fastest-growing enterprise AI platform",
+        "risk_score": 95,
+        "risk_level": "critical",
+        "impact_summary": "Anthropic raised $13B at $183B valuation (September 2025), triple its March valuation. Run-rate revenue surged from $1B (January) to $5B+ (August) - one of fastest tech growth trajectories ever. Claude Code generating $500M+ ARR with 10x growth in 3 months. Serves 300K+ business customers. Claude Sonnet 4.5 (September 2025) leads on coding benchmarks (72.5% SWE-bench). Computer Use enables AI to control computers directly. Major threat with enterprise focus and safety-first approach.",
+        "total_sources": 412
     },
     {
-        "name": "Google AI",
-        "keywords": ["Gemini", "Bard", "PaLM 2", "AI", "DeepMind"],
-        "description": "Tech giant's AI division - massive R&D budget and distribution",
-        "risk_score": 78,
-        "risk_level": "high",
-        "impact_summary": "Google launched Gemini Pro with multimodal capabilities. Integration with Google Workspace threatens productivity AI market.",
-        "total_sources": 203
+        "name": "Cursor",
+        "keywords": ["AI coding", "vibe coding", "Composer", "IDE", "developer tools", "Anysphere"],
+        "description": "Fastest-growing AI startup ever with $9.9B valuation and revolutionary AI-native coding experience",
+        "risk_score": 89,
+        "risk_level": "critical",
+        "impact_summary": "Cursor reached $9.9B valuation in June 2025 (up from $2.6B in December 2024), dubbed 'fastest growing startup ever' by Bloomberg. Surpassed $500M ARR with revenue doubling every 2 months. Generates ~1 billion lines of code daily. Three funding rounds in <1 year totaling $1B+. Disrupting GitHub Copilot with superior AI-native experience. Used by Stripe, Spotify, OpenAI engineers. Rejected OpenAI acquisition attempt. Represents paradigm shift in software development.",
+        "total_sources": 193
+    },
+    {
+        "name": "Google DeepMind",
+        "keywords": ["Gemini 2.5 Pro", "Gemini 3.0", "Deep Think", "Deep Research", "Veo 3", "NotebookLM"],
+        "description": "Tech giant's unified AI with massive distribution, Gemini 2.5 Pro and upcoming Gemini 3.0",
+        "risk_score": 92,
+        "risk_level": "critical",
+        "impact_summary": "Gemini 2.5 Pro with Deep Think achieves gold medal at IMO, ~90% on MMLU. Deep Research transforms hours of research into minutes. NotebookLM viral success with podcast generation. Veo 3 introduces native audio/video generation with sound effects and dialogue. Imagen 4 delivers superior image quality. Gemini 3.0 expected Q4 2025 with enhanced reasoning and multimodal capabilities. AI Overviews integrated into Search affects 1B+ users. Computer Use model enables browser/mobile automation.",
+        "total_sources": 456
     },
     {
         "name": "Perplexity AI",
-        "keywords": ["AI search", "answer engine", "citations"],
-        "description": "AI-powered search engine with strong product-market fit",
-        "risk_score": 65,
-        "risk_level": "medium",
-        "impact_summary": "Perplexity raised $73.6M Series B at $520M valuation. 10M monthly users, 500M+ queries served.",
-        "total_sources": 89
+        "keywords": ["AI search", "answer engine", "Comet browser", "Pro Search", "Shopping Hub", "Perplexity Assistant"],
+        "description": "AI-powered search challenger reaching $20B valuation with 780M+ monthly queries disrupting Google",
+        "risk_score": 87,
+        "risk_level": "critical",
+        "impact_summary": "Perplexity raised $200M at $20B valuation (September 2025), up from $18B two months prior. Processing 780M+ queries monthly with 30M+ active users. Approaching $200M ARR. Launched Comet browser with AI-powered browsing. Made $34.5B bid for Chrome browser. Perplexity Assistant enables cross-app tasks. Shopping Hub backed by Amazon and Nvidia. Major threat to traditional search with cited, conversational answers. Growing 3x faster than Google Search at comparable stage.",
+        "total_sources": 298
+    },
+    {
+        "name": "Databricks",
+        "keywords": ["Data Intelligence Platform", "IPO", "Mosaic ML", "Apache Spark", "data analytics", "AI platform"],
+        "description": "Data and AI giant valued at $100B+ preparing for blockbuster IPO with $3.7B ARR",
+        "risk_score": 84,
+        "risk_level": "high",
+        "impact_summary": "Databricks raised $10B at $62B valuation (January 2025), then secured $100B+ valuation (August 2025) becoming 4th private company to exceed $100B (after SpaceX, ByteDance, OpenAI). Reaching $3.7B ARR with 50% YoY growth. Free cash flow positive. 500+ customers at $1M+ ARR. Databricks SQL hit $600M ARR (up 150% YoY). Major enterprise adoption. Planning IPO late 2025 or early 2026. Strategic investments from Meta, Nvidia.",
+        "total_sources": 387
+    },
+    {
+        "name": "Meta AI",
+        "keywords": ["Llama 3.3", "Llama 3.2", "open source", "multimodal", "Ray-Ban Meta", "AI Studio"],
+        "description": "Open-source AI leader with 3B+ user distribution across Meta platforms and competitive models",
+        "risk_score": 85,
+        "risk_level": "high",
+        "impact_summary": "Llama 3.2 adds vision capabilities and edge deployment. Meta's open-source strategy commoditizes foundation models, threatening proprietary competitors. Ray-Ban Meta glasses achieved 700K+ units sold with AI integration. 3B+ users across Meta platforms provide unmatched distribution. AI Studio enables custom AI creation. WhatsApp AI integration reaches billions. Meta-Google $10B+ cloud deal over 6 years. Open-source approach accelerates ecosystem while Meta uses models internally for products.",
+        "total_sources": 334
     },
     {
         "name": "Mistral AI",
-        "keywords": ["Mistral", "open source", "LLM", "European AI"],
-        "description": "European open-source LLM competitor with strong technical talent",
-        "risk_score": 58,
-        "risk_level": "medium",
-        "impact_summary": "Mistral AI released Mixtral 8x7B, matching GPT-3.5 performance. $415M Series A makes it Europe's most valuable AI startup.",
-        "total_sources": 67
-    },
-    {
-        "name": "Cohere",
-        "keywords": ["enterprise AI", "embedding", "RAG"],
-        "description": "Enterprise-focused LLM platform with strong B2B traction",
-        "risk_score": 54,
-        "risk_level": "medium",
-        "impact_summary": "Cohere expanded Command model capabilities, focusing on enterprise RAG use cases. $270M Series C funding.",
-        "total_sources": 45
+        "keywords": ["Mistral Large 3", "Pixtral 12B", "Le Chat", "European AI", "open source", "Codestral"],
+        "description": "European AI champion valued at $6B with competitive models and enterprise focus",
+        "risk_score": 73,
+        "risk_level": "high",
+        "impact_summary": "Mistral raised $1.5B in Q3 2025 at undisclosed valuation (previously $6B June 2024). Mistral Large 3 competes with GPT-4 at lower cost. Strong European enterprise adoption in regulated industries. Pixtral adds vision capabilities. Europe's most valuable AI startup. Strategic positioning for sovereignty-focused markets. Codestral targets developers. Focus on cost-effective, performant models.",
+        "total_sources": 198
     },
 ]
 
 DEMO_RESEARCH = [
     {
-        "company_name": "Runway ML",
-        "total_sources": 112,
-        "api_usage": {"search_calls": 1, "ari_calls": 1, "total_calls": 2}
+        "company_name": "Databricks",
+        "total_sources": 387,
+        "api_usage": {"search_calls": 4, "ari_calls": 1, "total_calls": 5}
     },
     {
-        "company_name": "Stability AI",
-        "total_sources": 98,
-        "api_usage": {"search_calls": 1, "ari_calls": 1, "total_calls": 2}
+        "company_name": "Scale AI",
+        "total_sources": 243,
+        "api_usage": {"search_calls": 3, "ari_calls": 1, "total_calls": 4}
     },
     {
-        "company_name": "Hugging Face",
-        "total_sources": 145,
-        "api_usage": {"search_calls": 1, "ari_calls": 1, "total_calls": 2}
+        "company_name": "Canva",
+        "total_sources": 219,
+        "api_usage": {"search_calls": 3, "ari_calls": 1, "total_calls": 4}
+    },
+    {
+        "company_name": "Notion",
+        "total_sources": 204,
+        "api_usage": {"search_calls": 3, "ari_calls": 1, "total_calls": 4}
+    },
+    {
+        "company_name": "Figma",
+        "total_sources": 187,
+        "api_usage": {"search_calls": 2, "ari_calls": 1, "total_calls": 3}
+    },
+    {
+        "company_name": "Stripe",
+        "total_sources": 267,
+        "api_usage": {"search_calls": 3, "ari_calls": 1, "total_calls": 4}
+    },
+    {
+        "company_name": "Airtable",
+        "total_sources": 168,
+        "api_usage": {"search_calls": 2, "ari_calls": 1, "total_calls": 3}
+    },
+    {
+        "company_name": "Linear",
+        "total_sources": 134,
+        "api_usage": {"search_calls": 2, "ari_calls": 1, "total_calls": 3}
     },
 ]
 
@@ -298,7 +342,7 @@ async def seed_demo_data():
         print(f"  • Impact Cards: {len(DEMO_COMPETITORS)}")
         print(f"  • Company Research: {len(DEMO_RESEARCH)}")
         print(f"  • API Calls: {len(api_calls)}")
-        print(f"  • Total Risk Score Range: 54-85/100")
+        print(f"  • Total Risk Score Range: 73-98/100")
         print(f"  • Total Sources Aggregated: {sum(c['total_sources'] for c in DEMO_COMPETITORS)}")
         print("\n🎬 Ready for demo!")
         print("\n🚀 Next steps:")

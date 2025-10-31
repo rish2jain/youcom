@@ -14,14 +14,14 @@ class Integration(Base):
     """Integration marketplace entry"""
     __tablename__ = "integrations"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False)
     description = Column(Text)
     category = Column(String(50), nullable=False)
     
     # Developer information
-    developer_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    developer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     developer_name = Column(String(255))
     developer_email = Column(String(255))
     
@@ -49,7 +49,7 @@ class Integration(Base):
     
     # Relationships
     installations = relationship("IntegrationInstallation", back_populates="integration")
-    reviews = relationship("IntegrationReview", back_populates="integration")
+    reviews = relationship("BasicIntegrationReview", back_populates="integration")
     
     __table_args__ = (
         CheckConstraint("revenue_share_percent >= 0 AND revenue_share_percent <= 100", name="ck_integration_revenue_share_range"),
@@ -60,10 +60,10 @@ class IntegrationInstallation(Base):
     """User integration installations"""
     __tablename__ = "integration_installations"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    integration_id = Column(UUID(as_uuid=True), ForeignKey("integrations.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"))
+    id = Column(Integer, primary_key=True, index=True)
+    integration_id = Column(Integer, ForeignKey("integrations.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"))
     
     # Configuration
     configuration = Column(JSONB)
@@ -80,13 +80,13 @@ class IntegrationInstallation(Base):
     # Relationships
     integration = relationship("Integration", back_populates="installations")
 
-class IntegrationReview(Base):
+class BasicIntegrationReview(Base):
     """Integration reviews and ratings"""
     __tablename__ = "integration_reviews"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    integration_id = Column(UUID(as_uuid=True), ForeignKey("integrations.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    integration_id = Column(Integer, ForeignKey("integrations.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     rating = Column(Integer, nullable=False)  # 1-5 stars
     title = Column(String(255))
@@ -107,9 +107,9 @@ class IntegrationUsageLog(Base):
     """Integration usage analytics"""
     __tablename__ = "integration_usage_logs"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    integration_id = Column(UUID(as_uuid=True), ForeignKey("integrations.id"), nullable=False)
-    installation_id = Column(UUID(as_uuid=True), ForeignKey("integration_installations.id"), nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    integration_id = Column(Integer, ForeignKey("integrations.id"), nullable=False)
+    installation_id = Column(Integer, ForeignKey("integration_installations.id"), nullable=False)
     
     # Usage details
     action = Column(String(100))  # e.g., "send_notification", "sync_data"
