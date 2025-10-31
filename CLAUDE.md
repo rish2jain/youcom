@@ -173,8 +173,9 @@ All function signatures must include type hints. Use Pydantic models for request
 
 **Error Handling:**
 - Raise `HTTPException` for API errors
-- Use custom `YouComAPIError` for You.com API failures
+- Use custom `YouComAPIError` for You.com API failures with `api_type` parameter
 - Circuit breakers automatically handle retries (see `resilience_config.py`)
+- Enhanced error logging with structured context (status code, API type, payload)
 
 ### TypeScript Frontend Conventions
 
@@ -191,6 +192,114 @@ const { data, isLoading, error } = useQuery({
 
 **Real-time Updates:**
 Components subscribe to Socket.IO events for progress updates during API orchestration.
+
+**Error Boundaries:**
+Wrap components with `ErrorBoundary` to catch and display errors gracefully:
+```typescript
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+<ErrorBoundary context="API Dashboard">
+  <APIUsageDashboard />
+</ErrorBoundary>
+```
+
+## Recent Code Quality Improvements (2025)
+
+### Backend Error Handling Enhancements
+
+**Enhanced `YouComAPIError` Exception Class** (`backend/app/services/you_client.py`):
+- Added `api_type` parameter to identify which API failed (news, search, chat, ari)
+- Implemented `__str__` method for better error representation
+- All 4 API error handlers now include consistent context
+
+```python
+# Example usage
+raise YouComAPIError(
+    "Search API error",
+    status_code=503,
+    payload=response.text,
+    api_type="search"
+)
+```
+
+**Type Safety for Citation Handling**:
+- Added runtime type guards for citation data (dict vs string formats)
+- Defensive programming for invalid URL formats
+- Enhanced logging for unexpected data structures
+- Safe handling of None values and missing fields
+
+**Structured Error Logging**:
+- All API errors logged with status code, API type, and response payload
+- Enhanced debugging information for production troubleshooting
+- Consistent error context across all You.com API integrations
+
+### Frontend Error Visibility Improvements
+
+**Enhanced APIUsageDashboard Error Handling** (`components/APIUsageDashboard.tsx`):
+- Changed error UI from blue (info) to red (error) for better visibility
+- Replaced silent error suppression with proper error propagation
+- Added structured error logging with timestamp and context
+- Updated button text from "Refresh Metrics" to "Retry Connection"
+- Informative error messages guide users on next steps
+
+**React Error Boundary Component** (`components/ErrorBoundary.tsx`):
+- Class component using `componentDidCatch` lifecycle method
+- Catches JavaScript errors in component tree
+- Displays user-friendly error UI with recovery actions
+- Provides error context and component stack in development
+- Integrates with existing `ErrorDisplay` component
+- Optional custom fallback UI and error handlers
+
+### Configuration Improvements
+
+**Environment Variables** (`.env.example`, `backend/app/config.py`):
+- Updated database port: 5432 → 5433 (matches docker-compose)
+- Updated Redis port: 6379 → 6380 (matches docker-compose)
+- Added configurable API base URLs:
+  - `YOU_SEARCH_BASE_URL` (default: https://api.ydc-index.io)
+  - `YOU_AGENT_BASE_URL` (default: https://api.you.com/v1)
+- Converted hardcoded URLs to `@property` methods
+- All API URLs now environment-configurable for different deployment scenarios
+
+### Testing Infrastructure
+
+**Integration Tests** (`backend/tests/test_error_handling_integration.py`):
+- Comprehensive error handling test coverage
+- Tests for enhanced `YouComAPIError` functionality
+- Type safety tests for citation handling
+- Error logging verification
+- Coverage for all 4 You.com APIs (news, search, chat, ari)
+
+**Test Categories**:
+1. Enhanced error context and representation
+2. API-specific error handling (all 4 APIs)
+3. Citation type safety (dict, string, invalid formats)
+4. Error logging with structured context
+
+### Best Practices Implemented
+
+**Security & Configuration**:
+- Environment-based configuration (no hardcoded credentials)
+- Port conflict resolution (docker-compose alignment)
+- Configurable API endpoints for different environments
+
+**Error Handling**:
+- Consistent error context across all APIs
+- Type-safe data handling with runtime guards
+- Structured logging for debugging
+- User-friendly error messages with recovery actions
+
+**Frontend Resilience**:
+- Error boundaries prevent entire app crashes
+- Proper error propagation (no silent failures)
+- Informative UI feedback for errors
+- Recovery actions guide users
+
+**Testing Coverage**:
+- Integration tests for error scenarios
+- Type safety validation
+- Citation format handling
+- Logging verification
 
 ## Environment Configuration
 
