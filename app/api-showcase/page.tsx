@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Zap, Search, MessageSquare, BookOpen, Play, CheckCircle, Clock } from "lucide-react";
 
 export default function APIShowcase() {
@@ -352,12 +353,12 @@ export default function APIShowcase() {
             See It In Action
           </h3>
           <div className="flex justify-center space-x-4">
-            <a
+            <Link
               href="/"
               className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
             >
               Try Live Demo
-            </a>
+            </Link>
             <a
               href="/docs"
               className="px-8 py-3 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold"

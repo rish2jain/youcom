@@ -55,7 +55,8 @@ export default function MainContent({ activeItem }: MainContentProps) {
     handleSuccess("Custom action creation form opened");
   };
 
-  // Enhanced impact card data with dynamic content
+  // DEMO: Enhanced impact card data with static demo content
+  // This is sample data for demonstration purposes only
   const sampleImpactCard = {
     title: "OpenAI GPT-4 Turbo Launch Impact Analysis",
     riskScore: 75,
@@ -152,10 +153,20 @@ export default function MainContent({ activeItem }: MainContentProps) {
 
             {/* Impact Card Demo */}
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Latest Impact Analysis
-              </h2>
-              <ImpactCard data={sampleImpactCard} />
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Latest Impact Analysis
+                </h2>
+                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full border border-yellow-300">
+                  🎯 DEMO DATA
+                </span>
+              </div>
+              <div className="relative">
+                <ImpactCard data={sampleImpactCard} />
+                <div className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded border border-yellow-300">
+                  Demo Sample
+                </div>
+              </div>
             </div>
 
             {/* Success Metrics */}

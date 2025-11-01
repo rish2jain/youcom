@@ -1,416 +1,418 @@
+/**
+ * Real-time Performance Monitor Component
+ * Lightweight component for embedding performance metrics in other pages
+ */
+
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Activity,
   AlertTriangle,
   CheckCircle,
-  Clock,
+  Eye,
+  Gauge,
+  Minimize2,
+  Maximize2,
   Zap,
-  Bell,
-  BellOff,
 } from "lucide-react";
-import { api } from "@/lib/api";
-import { getSocket } from "@/lib/socket";
+import { usePerformanceMonitoring } from "@/lib/hooks/usePerformanceMonitoring";
 
-interface RealTimeMetric {
-  timestamp: string;
-  response_time: number;
-  accuracy: number;
-  throughput: number;
-  error_rate: number;
-  active_connections: number;
-}
-
-interface PerformanceAlert {
-  id: string;
-  type: "warning" | "critical" | "info";
-  metric: string;
-  message: string;
+interface CompactMetricProps {
+  label: string;
   value: number;
-  threshold: number;
-  timestamp: string;
-  acknowledged: boolean;
+  budget: number;
+  unit: string;
+  icon: React.ReactNode;
 }
 
-interface SystemStatus {
-  overall_health: "healthy" | "degraded" | "critical";
-  api_status: "operational" | "degraded" | "down";
-  ml_pipeline_status: "operational" | "degraded" | "down";
-  database_status: "operational" | "degraded" | "down";
-  last_updated: string;
-}
+const CompactMetric: React.FC<CompactMetricProps> = ({
+  label,
+  value,
+  budget,
+  unit,
+  icon,
+}) => {
+  const percentage = budget > 0 ? (value / budget) * 100 : 0;
+  const status =
+    percentage > 100 ? "critical" : percentage > 80 ? "warning" : "good";
 
-export function RealTimePerformanceMonitor() {
-  const [realtimeData, setRealtimeData] = useState<RealTimeMetric[]>([]);
-  const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
-  const [alertsEnabled, setAlertsEnabled] = useState(true);
-  const [selectedMetric, setSelectedMetric] = useState<string>("response_time");
+  const formatValue = (val: number) => {
+    if (unit === "ms") return `${Math.round(val)}ms`;
+    if (unit === "KB") return `${Math.round(val / 1024)}KB`;
+    if (unit === "score") return val.toFixed(3);
+    return val.toString();
+  };
 
-  const { data: systemStatus, isLoading: statusLoading } = useQuery({
-    queryKey: ["systemStatus"],
-    queryFn: () => api.get("/api/v1/monitoring/status").then((res) => res.data),
-    staleTime: 10000, // 10 seconds
-    refetchInterval: 30000, // 30 seconds
-  });
-
-  const { data: currentAlerts, isLoading: alertsLoading } = useQuery({
-    queryKey: ["performanceAlerts"],
-    queryFn: () =>
-      api.get("/api/v1/monitoring/alerts").then((res) => res.data.alerts),
-    staleTime: 5000, // 5 seconds
-    refetchInterval: 15000, // 15 seconds
-  });
-
-  useEffect(() => {
-    const socket = getSocket();
-    socket.emit("join_room", { room: "performance_monitoring" });
-
-    const handleMetricUpdate = (data: RealTimeMetric) => {
-      setRealtimeData((prev) => {
-        const newData = [...prev, data].slice(-50); // Keep last 50 data points
-        return newData;
-      });
-    };
-
-    const handleAlert = (alert: PerformanceAlert) => {
-      if (alertsEnabled) {
-        setAlerts((prev) => [alert, ...prev.slice(0, 9)]); // Keep last 10 alerts
-
-        // Show browser notification for critical alerts
-        if (alert.type === "critical" && "Notification" in window) {
-          if (Notification.permission === "granted") {
-            new Notification(`Critical Alert: ${alert.metric}`, {
-              body: alert.message,
-              icon: "/favicon.ico",
-            });
-          }
+  return (
+    <div className="flex items-center space-x-2">
+      <div
+        className={`p-1 rounded ${
+          status === "critical"
+            ? "bg-red-100 text-red-600"
+            : status === "warning"
+            ? "bg-yellow-100 text-yellow-600"
+            : "bg-green-100 text-green-600"
+        }`}
+      >
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-muted-foreground truncate">{label}</div>
+        <div className="text-sm font-medium">{formatValue(value)}</div>
+      </div>
+      <Badge
+        variant={
+          status === "critical"
+            ? "destructive"
+            : status === "warning"
+            ? "secondary"
+            : "default"
         }
+        className="text-xs"
+      >
+        {percentage.toFixed(0)}%
+      </Badge>
+    </div>
+  );
+};
+
+interface RealTimePerformanceMonitorProps {
+  compact?: boolean;
+  showScore?: boolean;
+  autoRefresh?: boolean;
+  refreshInterval?: number;
+}
+
+export const RealTimePerformanceMonitor: React.FC<
+  RealTimePerformanceMonitorProps
+> = ({
+  compact = false,
+  showScore = true,
+  autoRefresh = true,
+  refreshInterval = 30000, // 30 seconds
+}) => {
+  const {
+    currentMetrics,
+    budgetValidation,
+    isLoading,
+    error,
+    lastUpdated,
+    refreshMetrics,
+  } = usePerformanceMonitoring();
+
+  const [isExpanded, setIsExpanded] = useState(!compact);
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(autoRefresh);
+
+  // Auto-refresh functionality
+  useEffect(() => {
+    if (!isAutoRefreshing) return;
+
+    const interval = setInterval(() => {
+      refreshMetrics();
+    }, refreshInterval);
+
+    return () => clearInterval(interval);
+  }, [isAutoRefreshing, refreshInterval, refreshMetrics]);
+
+  // Real-time metric updates
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && isAutoRefreshing) {
+        refreshMetrics();
       }
     };
 
-    socket.on("performance_metric", handleMetricUpdate);
-    socket.on("performance_alert", handleAlert);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [isAutoRefreshing, refreshMetrics]);
 
-    return () => {
-      socket.emit("leave_room", { room: "performance_monitoring" });
-      socket.off("performance_metric", handleMetricUpdate);
-      socket.off("performance_alert", handleAlert);
-    };
-  }, [alertsEnabled]);
+  const getOverallStatus = () => {
+    if (!budgetValidation) return "unknown";
 
-  useEffect(() => {
-    if (currentAlerts) {
-      setAlerts(currentAlerts);
-    }
-  }, [currentAlerts]);
+    const criticalViolations = budgetValidation.violations.filter(
+      (v) => v.severity === "critical"
+    ).length;
+    const warningViolations = budgetValidation.violations.filter(
+      (v) => v.severity === "warning"
+    ).length;
 
-  const status = systemStatus || {};
-  const latestMetric = realtimeData[realtimeData.length - 1];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "operational":
-      case "healthy":
-        return "text-green-600 bg-green-100";
-      case "degraded":
-        return "text-yellow-600 bg-yellow-100";
-      case "down":
-      case "critical":
-        return "text-red-600 bg-red-100";
-      default:
-        return "text-gray-600 bg-gray-100";
-    }
+    if (criticalViolations > 0) return "critical";
+    if (warningViolations > 0) return "warning";
+    return "good";
   };
 
-  const getAlertColor = (type: string) => {
-    switch (type) {
-      case "critical":
-        return "text-red-600 bg-red-100 border-red-200";
-      case "warning":
-        return "text-yellow-600 bg-yellow-100 border-yellow-200";
-      case "info":
-        return "text-blue-600 bg-blue-100 border-blue-200";
-      default:
-        return "text-gray-600 bg-gray-100 border-gray-200";
-    }
-  };
+  const status = getOverallStatus();
 
-  const formatMetricValue = (value: number, metric: string) => {
-    if (!value) return "0";
-
-    switch (metric) {
-      case "response_time":
-        return `${value.toFixed(2)}s`;
-      case "accuracy":
-        return `${Math.round(value * 100)}%`;
-      case "throughput":
-        return `${value.toFixed(0)}/min`;
-      case "error_rate":
-        return `${(value * 100).toFixed(2)}%`;
-      case "active_connections":
-        return value.toString();
-      default:
-        return value.toString();
-    }
-  };
-
-  const requestNotificationPermission = async () => {
-    if ("Notification" in window && Notification.permission === "default") {
-      await Notification.requestPermission();
-    }
-  };
-
-  useEffect(() => {
-    requestNotificationPermission();
-  }, []);
-
-  if (statusLoading) {
+  if (compact && !isExpanded) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-        </div>
-      </div>
+      <Card
+        className={`w-fit ${
+          status === "critical"
+            ? "border-red-500"
+            : status === "warning"
+            ? "border-yellow-500"
+            : status === "good"
+            ? "border-green-500"
+            : "border-gray-300"
+        }`}
+      >
+        <CardContent className="p-3">
+          <div className="flex items-center space-x-3">
+            <div
+              className={`p-2 rounded-full ${
+                status === "critical"
+                  ? "bg-red-100 text-red-600"
+                  : status === "warning"
+                  ? "bg-yellow-100 text-yellow-600"
+                  : status === "good"
+                  ? "bg-green-100 text-green-600"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {status === "critical" ? (
+                <AlertTriangle className="w-4 h-4" />
+              ) : status === "warning" ? (
+                <AlertTriangle className="w-4 h-4" />
+              ) : status === "good" ? (
+                <CheckCircle className="w-4 h-4" />
+              ) : (
+                <Activity className="w-4 h-4" />
+              )}
+            </div>
+
+            <div>
+              <div className="text-sm font-medium">
+                Performance: {budgetValidation?.score || 0}/100
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {lastUpdated
+                  ? `Updated ${lastUpdated.toLocaleTimeString()}`
+                  : "No data"}
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(true)}
+            >
+              <Maximize2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* System Status Overview */}
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-            <Activity className="w-5 h-5 mr-2 text-blue-600" />
-            Real-Time Performance Monitor
-          </h3>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setAlertsEnabled(!alertsEnabled)}
-              className={`flex items-center space-x-2 px-3 py-2 text-sm rounded-lg ${
-                alertsEnabled
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-gray-100 text-gray-700"
+    <Card
+      className={`${
+        status === "critical"
+          ? "border-red-500"
+          : status === "warning"
+          ? "border-yellow-500"
+          : status === "good"
+          ? "border-green-500"
+          : "border-gray-300"
+      }`}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <div
+              className={`p-2 rounded-full ${
+                status === "critical"
+                  ? "bg-red-100 text-red-600"
+                  : status === "warning"
+                  ? "bg-yellow-100 text-yellow-600"
+                  : status === "good"
+                  ? "bg-green-100 text-green-600"
+                  : "bg-gray-100 text-gray-600"
               }`}
             >
-              {alertsEnabled ? (
-                <Bell className="w-4 h-4" />
-              ) : (
-                <BellOff className="w-4 h-4" />
-              )}
-              <span>{alertsEnabled ? "Alerts On" : "Alerts Off"}</span>
-            </button>
-            <div className="text-sm text-gray-600">
-              Last updated:{" "}
-              {status.last_updated
-                ? new Date(status.last_updated).toLocaleTimeString()
-                : "Never"}
+              <Activity className="w-4 h-4" />
             </div>
+            <div>
+              <h3 className="text-sm font-medium">Performance Monitor</h3>
+              <p className="text-xs text-muted-foreground">
+                {lastUpdated
+                  ? `Updated ${lastUpdated.toLocaleTimeString()}`
+                  : "No data available"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {showScore && budgetValidation && (
+              <Badge
+                variant={
+                  budgetValidation.score >= 90
+                    ? "default"
+                    : budgetValidation.score >= 70
+                    ? "secondary"
+                    : "destructive"
+                }
+              >
+                {budgetValidation.score}/100
+              </Badge>
+            )}
+
+            {compact && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(false)}
+              >
+                <Minimize2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* System Health Status */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                status.overall_health
-              )}`}
-            >
-              {status.overall_health === "healthy" ? (
-                <CheckCircle className="w-4 h-4 mr-1" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 mr-1" />
-              )}
-              {status.overall_health?.toUpperCase() || "UNKNOWN"}
-            </div>
-            <div className="text-xs text-gray-600 mt-2">Overall Health</div>
+        {error && (
+          <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            {error}
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                status.api_status
-              )}`}
-            >
-              {status.api_status?.toUpperCase() || "UNKNOWN"}
-            </div>
-            <div className="text-xs text-gray-600 mt-2">API Status</div>
-          </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                status.ml_pipeline_status
-              )}`}
-            >
-              {status.ml_pipeline_status?.toUpperCase() || "UNKNOWN"}
-            </div>
-            <div className="text-xs text-gray-600 mt-2">ML Pipeline</div>
-          </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                status.database_status
-              )}`}
-            >
-              {status.database_status?.toUpperCase() || "UNKNOWN"}
-            </div>
-            <div className="text-xs text-gray-600 mt-2">Database</div>
-          </div>
-        </div>
+        )}
 
-        {/* Current Metrics */}
-        {latestMetric && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="text-xl font-bold text-blue-600">
-                {formatMetricValue(latestMetric.response_time, "response_time")}
-              </div>
-              <div className="text-xs text-gray-600">Response Time</div>
+        {isLoading ? (
+          <div className="text-center py-4 text-sm text-muted-foreground">
+            Loading performance data...
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <CompactMetric
+              label="Largest Contentful Paint"
+              value={currentMetrics.lcp || 0}
+              budget={2500}
+              unit="ms"
+              icon={<Eye className="w-3 h-3" />}
+            />
+
+            <CompactMetric
+              label="First Input Delay"
+              value={currentMetrics.fid || 0}
+              budget={100}
+              unit="ms"
+              icon={<Zap className="w-3 h-3" />}
+            />
+
+            <CompactMetric
+              label="Cumulative Layout Shift"
+              value={currentMetrics.cls || 0}
+              budget={0.1}
+              unit="score"
+              icon={<Activity className="w-3 h-3" />}
+            />
+
+            <CompactMetric
+              label="First Contentful Paint"
+              value={currentMetrics.fcp || 0}
+              budget={1800}
+              unit="ms"
+              icon={<Gauge className="w-3 h-3" />}
+            />
+          </div>
+        )}
+
+        {budgetValidation && budgetValidation.violations.length > 0 && (
+          <div className="mt-4 pt-3 border-t">
+            <div className="text-xs text-muted-foreground mb-2">
+              {budgetValidation.violations.length} budget violation(s)
             </div>
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="text-xl font-bold text-green-600">
-                {formatMetricValue(latestMetric.accuracy, "accuracy")}
-              </div>
-              <div className="text-xs text-gray-600">Accuracy</div>
-            </div>
-            <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <div className="text-xl font-bold text-purple-600">
-                {formatMetricValue(latestMetric.throughput, "throughput")}
-              </div>
-              <div className="text-xs text-gray-600">Throughput</div>
-            </div>
-            <div className="text-center p-3 bg-orange-50 rounded-lg">
-              <div className="text-xl font-bold text-orange-600">
-                {formatMetricValue(latestMetric.error_rate, "error_rate")}
-              </div>
-              <div className="text-xs text-gray-600">Error Rate</div>
-            </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-xl font-bold text-gray-600">
-                {formatMetricValue(
-                  latestMetric.active_connections,
-                  "active_connections"
-                )}
-              </div>
-              <div className="text-xs text-gray-600">Connections</div>
+            <div className="space-y-1">
+              {budgetValidation.violations
+                .slice(0, 3)
+                .map((violation, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between text-xs"
+                  >
+                    <span className="text-muted-foreground">
+                      {violation.metric.toUpperCase()}
+                    </span>
+                    <Badge
+                      variant={
+                        violation.severity === "critical"
+                          ? "destructive"
+                          : "secondary"
+                      }
+                      className="text-xs"
+                    >
+                      {violation.severity}
+                    </Badge>
+                  </div>
+                ))}
+              {budgetValidation.violations.length > 3 && (
+                <div className="text-xs text-muted-foreground">
+                  +{budgetValidation.violations.length - 3} more
+                </div>
+              )}
             </div>
           </div>
         )}
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Real-Time Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-semibold text-gray-900">Live Metrics</h4>
-            <select
-              value={selectedMetric}
-              onChange={(e) => setSelectedMetric(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="mt-4 pt-3 border-t flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refreshMetrics}
+              disabled={isLoading}
             >
-              <option value="response_time">Response Time</option>
-              <option value="accuracy">Accuracy</option>
-              <option value="throughput">Throughput</option>
-              <option value="error_rate">Error Rate</option>
-              <option value="active_connections">Active Connections</option>
-            </select>
+              Refresh
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAutoRefreshing(!isAutoRefreshing)}
+              className={isAutoRefreshing ? "text-green-600" : "text-gray-600"}
+            >
+              Auto: {isAutoRefreshing ? "ON" : "OFF"}
+            </Button>
           </div>
 
-          {realtimeData.length > 0 ? (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={realtimeData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="timestamp"
-                    tickFormatter={(value) =>
-                      new Date(value).toLocaleTimeString()
-                    }
-                  />
-                  <YAxis />
-                  <Tooltip
-                    labelFormatter={(value) =>
-                      new Date(value).toLocaleTimeString()
-                    }
-                    formatter={(value) => [
-                      formatMetricValue(Number(value), selectedMetric),
-                      selectedMetric.replace("_", " "),
-                    ]}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey={selectedMetric}
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Clock className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm">Waiting for real-time data...</p>
-            </div>
-          )}
+          <div className="text-xs text-muted-foreground">
+            {isAutoRefreshing && `Refreshes every ${refreshInterval / 1000}s`}
+          </div>
         </div>
-
-        {/* Active Alerts */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            Active Alerts ({alerts.length})
-          </h4>
-
-          {alerts.length > 0 ? (
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className={`p-3 rounded-lg border ${getAlertColor(
-                    alert.type
-                  )}`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-medium text-sm">
-                        {alert.metric.replace("_", " ").toUpperCase()}
-                      </div>
-                      <div className="text-sm mt-1">{alert.message}</div>
-                      <div className="text-xs mt-2">
-                        Current: {formatMetricValue(alert.value, alert.metric)}{" "}
-                        | Threshold:{" "}
-                        {formatMetricValue(alert.threshold, alert.metric)}
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(alert.timestamp).toLocaleTimeString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400" />
-              <p className="text-sm">No active alerts</p>
-              <p className="text-xs">System is performing normally</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
+};
+
+// Hook for embedding performance status in other components
+export function usePerformanceStatus() {
+  const { budgetValidation, currentMetrics, lastUpdated } =
+    usePerformanceMonitoring();
+
+  const getStatus = () => {
+    if (!budgetValidation) return "unknown";
+
+    const criticalViolations = budgetValidation.violations.filter(
+      (v) => v.severity === "critical"
+    ).length;
+    const warningViolations = budgetValidation.violations.filter(
+      (v) => v.severity === "warning"
+    ).length;
+
+    if (criticalViolations > 0) return "critical";
+    if (warningViolations > 0) return "warning";
+    return "good";
+  };
+
+  return {
+    status: getStatus(),
+    score: budgetValidation?.score || 0,
+    violations: budgetValidation?.violations || [],
+    metrics: currentMetrics,
+    lastUpdated,
+    hasData: Object.keys(currentMetrics).length > 0,
+  };
 }

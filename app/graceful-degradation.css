@@ -1,0 +1,374 @@
+/**
+ * Graceful Degradation CSS
+ * Provides styling for different degradation levels
+ */
+
+/* Base fallback styles */
+.no-js-fallback {
+  @apply p-4 border border-gray-200 rounded-lg bg-gray-50;
+}
+
+.fallback-content {
+  @apply text-center;
+}
+
+.fallback-content h3 {
+  @apply text-lg font-semibold text-gray-800 mb-2;
+}
+
+.fallback-content p {
+  @apply text-gray-600 mb-2;
+}
+
+/* Chart fallback styles */
+.chart-fallback {
+  @apply w-full;
+}
+
+.text-chart-fallback {
+  @apply p-4 bg-white border border-gray-200 rounded-lg;
+}
+
+.simple-chart {
+  @apply w-full;
+}
+
+.chart-container {
+  @apply relative;
+}
+
+/* Interactive fallback styles */
+.modal-fallback {
+  @apply relative;
+}
+
+.dropdown-fallback {
+  @apply relative;
+}
+
+.tooltip-fallback {
+  @apply relative;
+}
+
+.accordion-fallback {
+  @apply w-full;
+}
+
+.tabs-fallback {
+  @apply w-full;
+}
+
+/* Degradation level specific styles */
+
+/* Minimal degradation level */
+.degradation-minimal {
+  /* Disable all animations and transitions */
+}
+
+.degradation-minimal *,
+.degradation-minimal *::before,
+.degradation-minimal *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.degradation-minimal .heavy-component {
+  display: none !important;
+}
+
+.degradation-minimal .heavy-component-fallback {
+  display: block !important;
+}
+
+.degradation-minimal .chart-container {
+  display: none !important;
+}
+
+.degradation-minimal .chart-text-fallback {
+  display: block !important;
+}
+
+.degradation-minimal .interactive-element {
+  pointer-events: none !important;
+}
+
+.degradation-minimal .animation-element {
+  display: none !important;
+}
+
+/* Basic degradation level */
+.degradation-basic {
+  /* Minimal animations, basic interactions */
+}
+
+.degradation-basic * {
+  animation-duration: 0.1s !important;
+  transition-duration: 0.1s !important;
+}
+
+.degradation-basic .heavy-component {
+  display: none !important;
+}
+
+.degradation-basic .heavy-component-fallback {
+  display: block !important;
+}
+
+.degradation-basic .advanced-chart {
+  display: none !important;
+}
+
+.degradation-basic .simple-chart-fallback {
+  display: block !important;
+}
+
+.degradation-basic .complex-animation {
+  display: none !important;
+}
+
+/* Standard degradation level */
+.degradation-standard {
+  /* Reduced animations, standard interactions */
+}
+
+.degradation-standard * {
+  animation-duration: 0.2s !important;
+  transition-duration: 0.2s !important;
+}
+
+.degradation-standard .heavy-component {
+  display: none !important;
+}
+
+.degradation-standard .heavy-component-fallback {
+  display: block !important;
+}
+
+.degradation-standard .complex-animation {
+  display: none !important;
+}
+
+.degradation-standard .simple-animation {
+  display: block !important;
+}
+
+/* Enhanced degradation level */
+.degradation-enhanced {
+  /* Reduced motion, enhanced interactions */
+}
+
+.degradation-enhanced * {
+  animation-duration: 0.15s !important;
+  transition-duration: 0.15s !important;
+}
+
+.degradation-enhanced .complex-animation {
+  display: none !important;
+}
+
+.degradation-enhanced .simple-animation {
+  display: block !important;
+}
+
+/* Full degradation level */
+.degradation-full {
+  /* All features enabled */
+}
+
+/* Responsive adjustments for degradation */
+@media (max-width: 768px) {
+  .degradation-minimal,
+  .degradation-basic {
+    /* More aggressive degradation on mobile */
+  }
+
+  .degradation-minimal .mobile-hide,
+  .degradation-basic .mobile-hide {
+    display: none !important;
+  }
+
+  .degradation-minimal .mobile-simplify,
+  .degradation-basic .mobile-simplify {
+    @apply text-sm p-2;
+  }
+}
+
+/* Print styles for degradation */
+@media print {
+  .degradation-minimal,
+  .degradation-basic,
+  .degradation-standard,
+  .degradation-enhanced,
+  .degradation-full {
+    /* Print-friendly styles */
+  }
+
+  .chart-container {
+    display: none !important;
+  }
+
+  .chart-text-fallback {
+    display: block !important;
+  }
+
+  .interactive-element {
+    pointer-events: none !important;
+  }
+
+  .animation-element {
+    display: none !important;
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  .chart-fallback {
+    @apply border-2 border-black;
+  }
+
+  .fallback-content {
+    @apply bg-white text-black;
+  }
+
+  .interactive-fallback button {
+    @apply border-2 border-black bg-white text-black;
+  }
+}
+
+/* Reduced motion adjustments */
+@media (prefers-reduced-motion: reduce) {
+  .degradation-minimal *,
+  .degradation-basic *,
+  .degradation-standard *,
+  .degradation-enhanced *,
+  .degradation-full * {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}
+
+/* Focus styles for accessibility */
+.interactive-fallback button:focus,
+.interactive-fallback [tabindex]:focus {
+  @apply outline-2 outline-blue-500 outline-offset-2;
+}
+
+/* Loading states for degraded experiences */
+.degradation-loading {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+.degradation-loading-text {
+  @apply h-4 bg-gray-200 rounded mb-2;
+}
+
+.degradation-loading-button {
+  @apply h-8 bg-gray-200 rounded w-20;
+}
+
+/* Error states for degraded experiences */
+.degradation-error {
+  @apply p-4 bg-red-50 border border-red-200 rounded-lg;
+}
+
+.degradation-error-message {
+  @apply text-red-700 text-sm;
+}
+
+/* Success states for degraded experiences */
+.degradation-success {
+  @apply p-4 bg-green-50 border border-green-200 rounded-lg;
+}
+
+.degradation-success-message {
+  @apply text-green-700 text-sm;
+}
+
+/* Utility classes for degradation */
+.show-on-degradation {
+  display: none;
+}
+
+.degradation-minimal .show-on-degradation,
+.degradation-basic .show-on-degradation {
+  display: block !important;
+}
+
+.hide-on-degradation {
+  display: block;
+}
+
+.degradation-minimal .hide-on-degradation,
+.degradation-basic .hide-on-degradation {
+  display: none !important;
+}
+
+/* Performance-aware styles */
+.performance-low {
+  /* Styles for low-performance devices */
+}
+
+.performance-low * {
+  will-change: auto !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.performance-medium {
+  /* Styles for medium-performance devices */
+}
+
+.performance-high {
+  /* Styles for high-performance devices */
+}
+
+/* Network-aware styles */
+.network-slow {
+  /* Styles for slow networks */
+}
+
+/* Use loading="lazy" attribute in HTML/JSX instead of CSS */
+img[loading="lazy"] {
+  /* Styles for lazy-loaded images */
+}
+
+.network-slow .preload {
+  display: none !important;
+}
+
+.network-fast {
+  /* Styles for fast networks */
+}
+
+/* Battery-aware styles */
+.battery-low {
+  /* Styles for low battery */
+}
+
+.battery-low * {
+  animation: none !important;
+  transition: none !important;
+}
+
+.battery-low .battery-intensive {
+  display: none !important;
+}
+
+/* Save data mode styles */
+.save-data {
+  /* Styles for save data mode */
+}
+
+.save-data .heavy-image {
+  display: none !important;
+}
+
+.save-data .image-placeholder {
+  display: block !important;
+}
+
+.save-data .autoplay-video {
+  display: none !important;
+}

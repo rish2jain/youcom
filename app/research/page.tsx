@@ -1,9 +1,33 @@
 "use client";
 
-import { CompanyResearch } from "@/components/CompanyResearch";
 import { useSearchParams } from "next/navigation";
 import { useUserContext, getIndustryCompetitors } from "@/contexts/UserContext";
 import { Suspense } from "react";
+import dynamic from "next/dynamic";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+
+// Lazy load the heavy CompanyResearch component
+const CompanyResearch = dynamic(
+  () =>
+    import("@/components/CompanyResearch").then((mod) => ({
+      default: mod.CompanyResearch,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-2/3 mb-6"></div>
+            <div className="h-12 bg-gray-200 rounded mb-4"></div>
+          </div>
+        </div>
+        <LoadingSkeleton />
+      </div>
+    ),
+  }
+);
 
 function ResearchContent() {
   const searchParams = useSearchParams();
@@ -19,7 +43,8 @@ function ResearchContent() {
           <div>
             <h2 className="text-xl font-bold mb-1">🔍 Deep Company Research</h2>
             <p className="text-indigo-50 text-sm">
-              <strong>So what?</strong> Get comprehensive competitive intelligence from 400+ sources in under 2 minutes.
+              <strong>So what?</strong> Get comprehensive competitive
+              intelligence from 400+ sources in under 2 minutes.
             </p>
           </div>
           <div className="text-right">
@@ -41,7 +66,9 @@ function ResearchContent() {
         {userContext.industry && !companyFromUrl && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-gray-700 mb-2">
-              <strong>💡 Suggested competitors in {userContext.industry}:</strong>
+              <strong>
+                💡 Suggested competitors in {userContext.industry}:
+              </strong>
             </p>
             <div className="flex flex-wrap gap-2">
               {suggestedCompanies.slice(0, 6).map((company) => (

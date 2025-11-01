@@ -90,17 +90,25 @@ async def get_company_research(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all company research records"""
-    query = select(CompanyResearch)
-    
-    if company:
-        query = query.where(CompanyResearch.company_name.ilike(f"%{company}%"))
-    
-    query = query.offset(skip).limit(limit).order_by(CompanyResearch.created_at.desc())
-    
-    result = await db.execute(query)
-    items = result.scalars().all()
-    
-    return items
+    try:
+        query = select(CompanyResearch)
+        
+        if company:
+            query = query.where(CompanyResearch.company_name.ilike(f"%{company}%"))
+        
+        query = query.offset(skip).limit(limit).order_by(CompanyResearch.created_at.desc())
+        
+        result = await db.execute(query)
+        items = result.scalars().all()
+        
+        # Convert SQLAlchemy models to Pydantic models
+        return [CompanyResearchSchema.model_validate(item) for item in items]
+    except Exception as e:
+        logger.error(f"❌ Error fetching company research: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch company research: {str(e)}"
+        )
 
 @router.get("/{research_id}", response_model=CompanyResearchSchema)
 async def get_company_research_by_id(

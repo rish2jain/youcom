@@ -97,7 +97,12 @@ export function FeaturedImpactCard() {
             </div>
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2 bg-white/80 hover:bg-white border border-orange-200 rounded-lg text-sm font-medium text-gray-700 hover:text-gray-900 transition-all duration-200 ml-4">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-2 px-4 py-2 bg-white/80 hover:bg-white border border-orange-200 rounded-lg text-sm font-medium text-gray-700 hover:text-gray-900 transition-all duration-200 ml-4 min-h-[44px]"
+            aria-label={isExpanded ? "Collapse full report" : "Expand full report"}
+            aria-expanded={isExpanded}
+          >
             {isExpanded ? (
               <>
                 <ChevronUp className="w-4 h-4" />
@@ -349,17 +354,34 @@ export function FeaturedImpactCard() {
 
               {/* Actions */}
               <div className="space-y-3">
-                <button className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                <button 
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors min-h-[44px]"
+                  aria-label="Share impact card with team"
+                >
                   <Share className="w-4 h-4" />
                   Share with Team
                 </button>
 
-                <button className="w-full flex items-center justify-center gap-2 bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors">
+                <button 
+                  className="w-full flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors min-h-[44px]"
+                  aria-label="Generate mitigation strategy for high threat"
+                >
+                  <Target className="w-4 h-4" />
+                  Generate Mitigation Strategy
+                </button>
+
+                <button 
+                  className="w-full flex items-center justify-center gap-2 bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors min-h-[44px]"
+                  aria-label="Export impact card as PDF"
+                >
                   <Download className="w-4 h-4" />
                   Export PDF
                 </button>
 
-                <button className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 px-4 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
+                <button 
+                  className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 px-4 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors min-h-[44px]"
+                  aria-label="View full analysis details"
+                >
                   <ExternalLink className="w-4 h-4" />
                   View Full Analysis
                 </button>

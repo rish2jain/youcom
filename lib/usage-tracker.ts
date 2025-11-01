@@ -162,6 +162,12 @@ class UsageTracker {
   }
 
   private loadFromStorage(): void {
+    // Only access localStorage in browser environment
+    if (typeof window === "undefined") {
+      this.calls = [];
+      return;
+    }
+
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
@@ -178,6 +184,11 @@ class UsageTracker {
   }
 
   private saveToStorage(): void {
+    // Only access localStorage in browser environment
+    if (typeof window === "undefined") {
+      return;
+    }
+
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.calls));
     } catch (error) {

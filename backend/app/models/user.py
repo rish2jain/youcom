@@ -46,6 +46,12 @@ class User(Base):
     workspace_memberships = relationship("WorkspaceMember", back_populates="user", foreign_keys="WorkspaceMember.user_id", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
+    
+    # User behavior tracking relationships
+    actions = relationship("UserAction", back_populates="user", cascade="all, delete-orphan")
+    behavior_patterns = relationship("BehaviorPattern", back_populates="user", cascade="all, delete-orphan")
+    fatigue_metrics = relationship("AlertFatigueMetric", back_populates="user", cascade="all, delete-orphan")
+    learning_state = relationship("LearningLoopState", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     @property
     def is_admin(self) -> bool:

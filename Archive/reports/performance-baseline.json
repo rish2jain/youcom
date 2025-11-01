@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-11-01T02:25:50.108Z",
+  "source": "industry_standards",
+  "measurements": {
+    "totalBundleSize": 2800000,
+    "initialLoadTime": 8000,
+    "vendorBundleSize": 1200000,
+    "applicationBundleSize": 1600000,
+    "targetReduction": 0.4,
+    "maxOptimizedSize": 500000
+  },
+  "description": "Industry standard baselines for enterprise SaaS applications"
+}

@@ -1,0 +1,155 @@
+name: Chrome DevTools MCP Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install Node.js dependencies
+        run: npm ci
+      
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Setup environment variables
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:test@localhost:5432/test_db" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379/0" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_API_URL=http://localhost:8000" >> $GITHUB_ENV
+          echo "BACKEND_URL=http://localhost:8000" >> $GITHUB_ENV
+          echo "FRONTEND_URL=http://localhost:3456" >> $GITHUB_ENV
+        env:
+          YOU_API_KEY: ${{ secrets.YOU_API_KEY }}
+      
+      - name: Run database migrations
+        run: |
+          cd backend
+          alembic upgrade head
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/test_db
+      
+      - name: Start backend server
+        run: |
+          cd backend
+          uvicorn app.main:app --port 8000 --host 0.0.0.0 &
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          YOU_API_KEY: ${{ secrets.YOU_API_KEY }}
+      
+      - name: Build frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+      
+      - name: Start frontend server
+        run: npm run start &
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+      
+      - name: Wait for services to be ready
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:3456 > /dev/null 2>&1; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:8000/api/health > /dev/null 2>&1; do sleep 2; done'
+          echo "Services are ready"
+      
+      - name: Install Chrome DevTools MCP
+        run: npm install -g chrome-devtools-mcp
+      
+      - name: Install test dependencies
+        run: |
+          npm install -D ts-node @types/node
+      
+      - name: Run Chrome DevTools MCP tests
+        run: |
+          npm run test:chrome-devtools
+        env:
+          FRONTEND_URL: http://localhost:3456
+          BACKEND_URL: http://localhost:8000
+          NODE_ENV: test
+        continue-on-error: true
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: |
+            tests/chrome-devtools/results/
+            tests/chrome-devtools/screenshots/
+          retention-days: 7
+      
+      - name: Upload test report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-report
+          path: tests/chrome-devtools/results/*.json
+          retention-days: 7
+      
+      - name: Test summary
+        if: always()
+        run: |
+          if [ -f tests/chrome-devtools/results/report-*.json ]; then
+            echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+            cat tests/chrome-devtools/results/report-*.json | jq -r '
+              "### Summary\n" +
+              "- Total: \(.summary.total)\n" +
+              "- Passed: \(.summary.passed)\n" +
+              "- Failed: \(.summary.failed)\n" +
+              "- Duration: \(.summary.duration)ms\n"
+            ' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "No test report found" >> $GITHUB_STEP_SUMMARY
+          fi
+

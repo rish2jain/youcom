@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   ArrowRight,
   AlertTriangle,
   CheckCircle,
   TrendingUp,
   Activity,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { useUserContext, getIndustryCompetitors } from "@/contexts/UserContext";
+import { LearningLoop } from "@/components/LearningLoop";
+import { useDashboardData } from "@/lib/hooks/useDashboardData";
 
 interface Alert {
   id: string;
@@ -29,158 +32,42 @@ interface RecentResearch {
 }
 
 export default function DashboardPage() {
-  const { userContext } = useUserContext();
+  // Fetch data from APIs
+  const { alerts, research, isLoading, hasError, refetch, dataUpdatedAt } = useDashboardData();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Generate industry-specific alerts and research
-  const industryCompetitors = useMemo(() => {
-    return getIndustryCompetitors(userContext.industry);
-  }, [userContext.industry]);
+  // Ensure alerts.data is always an array for safety
+  const alertsData = Array.isArray(alerts?.data) ? alerts.data : [];
+  const researchData = Array.isArray(research?.data) ? research.data : [];
 
-  // Current competitive landscape (October 2025)
-  const alertTemplates = useMemo(() => {
-    const templates: Record<string, any[]> = {
-      "Artificial Intelligence & ML": [
-        {
-          company: "OpenAI",
-          risk: 9.8,
-          level: "high",
-          summary:
-            "GPT-5 released with breakthrough reasoning capabilities, $300B valuation, $13B ARR",
-        },
-        {
-          company: "Anthropic",
-          risk: 9.5,
-          level: "high",
-          summary:
-            "Claude 4 with Computer Use enables AI to control computers directly, $183B valuation",
-        },
-        {
-          company: "Cursor",
-          risk: 8.9,
-          level: "high",
-          summary:
-            "Fastest-growing AI startup ever, $9.9B valuation, generates 1B lines of code daily",
-        },
-        {
-          company: "Google DeepMind",
-          risk: 9.2,
-          level: "high",
-          summary:
-            "Gemini 2.5 Pro achieves IMO gold medal, Gemini 3.0 expected Q4 2025",
-        },
-        {
-          company: "Perplexity AI",
-          risk: 8.7,
-          level: "high",
-          summary:
-            "$20B valuation, 780M+ monthly queries, disrupting Google Search with AI",
-        },
-        {
-          company: "Databricks",
-          risk: 8.4,
-          level: "high",
-          summary:
-            "$100B+ valuation, $3.7B ARR, preparing for blockbuster IPO late 2025",
-        },
-      ],
-      "SaaS & Cloud Services": [
-        {
-          company: "Databricks",
-          risk: 8.4,
-          level: "high",
-          summary:
-            "$100B+ valuation, $3.7B ARR, preparing for blockbuster IPO late 2025",
-        },
-        {
-          company: "Notion",
-          risk: 7.2,
-          level: "high",
-          summary:
-            "AI writing assistant and workspace automation driving enterprise adoption",
-        },
-        {
-          company: "Figma",
-          risk: 6.8,
-          level: "medium",
-          summary:
-            "AI design features and Dev Mode post-Adobe acquisition block",
-        },
-      ],
-      "E-commerce & Retail": [
-        {
-          company: "Canva",
-          risk: 7.5,
-          level: "high",
-          summary:
-            "AI-powered design tools with Magic Studio, preparing for IPO",
-        },
-        {
-          company: "Stripe",
-          risk: 7.2,
-          level: "high",
-          summary:
-            "Payment infrastructure with AI fraud detection and global expansion",
-        },
-        {
-          company: "Amazon",
-          risk: 8.0,
-          level: "high",
-          summary: "AI-powered shopping and logistics optimization",
-        },
-      ],
-      "Financial Services & Fintech": [
-        {
-          company: "Stripe",
-          risk: 7.5,
-          level: "high",
-          summary: "Payment infrastructure leadership with AI fraud detection",
-        },
-        {
-          company: "Scale AI",
-          risk: 7.0,
-          level: "high",
-          summary:
-            "$14B+ valuation, AI training data for government and enterprise",
-        },
-        {
-          company: "PayPal",
-          risk: 6.5,
-          level: "medium",
-          summary: "Digital payments evolution with crypto integration",
-        },
-      ],
-    };
-    return (
-      templates[userContext.industry] ||
-      templates["Artificial Intelligence & ML"]
-    );
-  }, [userContext.industry]);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
-  const alerts = useMemo<Alert[]>(() => {
-    return alertTemplates.slice(0, 3).map((template, idx) => ({
-      id: String(idx + 1),
-      company: template.company,
-      riskScore: template.risk,
-      riskLevel: template.level,
-      timeAgo:
-        idx === 0 ? "2 minutes ago" : idx === 1 ? "4 hours ago" : "1 day ago",
-      summary: template.summary,
-    }));
-  }, [alertTemplates]);
+  const formatLastUpdated = (timestamp: number) => {
+    if (!timestamp) return "Never";
+    const now = Date.now();
+    const diffMs = now - timestamp;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    
+    if (diffSeconds < 10) return "Just now";
+    if (diffSeconds < 60) return `${diffSeconds} seconds ago`;
+    if (diffMinutes < 60) return `${diffMinutes} ${diffMinutes === 1 ? "minute" : "minutes"} ago`;
+    return new Date(timestamp).toLocaleTimeString();
+  };
 
-  const recentResearch = useMemo<RecentResearch[]>(() => {
-    return industryCompetitors.slice(0, 3).map((company, idx) => ({
-      id: String(idx + 1),
-      company,
-      sources: 387 + idx * 25,
-      summary: `Comprehensive analysis of ${company}'s market position, products, and competitive strategy...`,
-      completedAt:
-        idx === 0 ? "3 hours ago" : idx === 1 ? "1 day ago" : "2 days ago",
-    }));
-  }, [industryCompetitors]);
+  // Calculate highest threat score from actual data
+  const highestThreat = alertsData.length > 0
+    ? Math.max(...alertsData.map((a) => a.riskScore))
+    : 0;
 
   const getRiskColor = (level: string) => {
     switch (level) {
+      case "critical":
+        return "text-red-700 bg-red-100 border-red-300";
       case "high":
         return "text-red-600 bg-red-50 border-red-200";
       case "medium":
@@ -193,7 +80,7 @@ export default function DashboardPage() {
   };
 
   const getRiskIcon = (level: string) => {
-    if (level === "high") return "🚨";
+    if (level === "critical" || level === "high") return "🚨";
     if (level === "medium") return "⚠️";
     return "✅";
   };
@@ -214,7 +101,13 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold">9.8/10</div>
+              <div className="text-2xl font-bold">
+                {isLoading ? (
+                  <Loader2 className="w-8 h-8 animate-spin inline" />
+                ) : (
+                  `${highestThreat.toFixed(1)}/10`
+                )}
+              </div>
               <div className="text-blue-100 text-xs">
                 Highest Current Threat
               </div>
@@ -224,12 +117,35 @@ export default function DashboardPage() {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Intelligence Dashboard
-          </h1>
-          <p className="text-gray-600">
-            Your competitive intelligence alerts and recent analyses
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                Intelligence Dashboard
+              </h1>
+              <p className="text-gray-600">
+                Your competitive intelligence alerts and recent analyses
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm text-gray-500">
+                  Last updated: {formatLastUpdated(dataUpdatedAt)}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Auto-refreshes every hour
+                </p>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing || isLoading}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh dashboard data"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Top Alerts Section */}
@@ -245,42 +161,70 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="space-y-4">
-            {alerts.map((alert) => (
-              <div
-                key={alert.id}
-                className={`border-2 rounded-xl p-6 transition-all hover:shadow-lg ${getRiskColor(
-                  alert.riskLevel
-                )}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-2xl">
-                        {getRiskIcon(alert.riskLevel)}
-                      </span>
-                      <h3 className="text-xl font-bold">
-                        {alert.riskLevel.toUpperCase()} THREAT: {alert.company}
-                      </h3>
+          {isLoading && alerts.isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="border-2 rounded-xl p-6 bg-gray-100 animate-pulse h-32"
+                ></div>
+              ))}
+            </div>
+          ) : alerts.error ? (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+              <p className="text-red-600 mb-2">
+                Failed to load alerts. Please try again later.
+              </p>
+              <p className="text-sm text-red-500">
+                {alerts.error instanceof Error
+                  ? alerts.error.message
+                  : "Unknown error"}
+              </p>
+            </div>
+          ) : alertsData.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+              <p className="text-gray-600">
+                No alerts available. Generate impact cards to see alerts here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {alertsData.map((alert) => (
+                <div
+                  key={alert.id}
+                  className={`border-2 rounded-xl p-6 transition-all hover:shadow-lg ${getRiskColor(
+                    alert.riskLevel
+                  )}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-2xl">
+                          {getRiskIcon(alert.riskLevel)}
+                        </span>
+                        <h3 className="text-xl font-bold">
+                          {alert.riskLevel.toUpperCase()} THREAT: {alert.company}
+                        </h3>
+                      </div>
+                      <p className="text-gray-700 mb-3">{alert.summary}</p>
+                      <div className="flex items-center gap-6 text-sm">
+                        <span className="font-semibold">
+                          Score: {alert.riskScore.toFixed(1)}/10
+                        </span>
+                        <span className="text-gray-600">{alert.timeAgo}</span>
+                      </div>
                     </div>
-                    <p className="text-gray-700 mb-3">{alert.summary}</p>
-                    <div className="flex items-center gap-6 text-sm">
-                      <span className="font-semibold">
-                        Score: {alert.riskScore}/10
-                      </span>
-                      <span className="text-gray-600">{alert.timeAgo}</span>
-                    </div>
+                    <Link
+                      href={`/research/${alert.id}`}
+                      className="ml-4 px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      View Full Analysis
+                    </Link>
                   </div>
-                  <Link
-                    href={`/research/${alert.id}`}
-                    className="ml-4 px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    View Full Analysis
-                  </Link>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Recent Intelligence Section */}
@@ -288,41 +232,71 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
             📊 Recent Intelligence
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {recentResearch.map((research) => (
-              <div
-                key={research.id}
-                className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                  <span className="text-sm text-gray-500">
-                    {research.completedAt}
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">
-                  {research.company}
-                </h3>
-                <p className="text-gray-600 text-sm mb-4">{research.summary}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">
-                    {research.sources} sources analyzed
-                  </span>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/research/${research.id}`}
-                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    >
-                      View Report
-                    </Link>
-                    <button className="text-gray-600 hover:text-gray-700 text-sm font-medium">
-                      Share
-                    </button>
+          {isLoading && research.isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white border border-gray-200 rounded-xl p-6 animate-pulse h-48"
+                ></div>
+              ))}
+            </div>
+          ) : research.error ? (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+              <p className="text-red-600 mb-2">
+                Failed to load research data. Please try again later.
+              </p>
+              <p className="text-sm text-red-500">
+                {research.error instanceof Error
+                  ? research.error.message
+                  : "Unknown error"}
+              </p>
+            </div>
+          ) : researchData.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+              <p className="text-gray-600">
+                No research available. Start researching companies to see them here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {researchData.map((researchItem) => (
+                <div
+                  key={researchItem.id}
+                  className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                    <span className="text-sm text-gray-500">
+                      {researchItem.completedAt}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    {researchItem.company}
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-4">
+                    {researchItem.summary}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">
+                      {researchItem.sources} sources analyzed
+                    </span>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/research/${researchItem.id}`}
+                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                      >
+                        View Report
+                      </Link>
+                      <button className="text-gray-600 hover:text-gray-700 text-sm font-medium">
+                        Share
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Business Insights Section */}
@@ -334,45 +308,85 @@ export default function DashboardPage() {
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-3">
                 <TrendingUp className="w-8 h-8 text-blue-600" />
-                <div className="text-2xl font-bold text-blue-900">+40%</div>
+                <div className="text-2xl font-bold text-blue-900">
+                  {isLoading ? (
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  ) : (
+                    alertsData.length
+                  )}
+                </div>
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">
-                Competitor Activity
+                Active Alerts
               </h3>
               <p className="text-sm text-gray-700">
-                Your competitors' product launches increased this week. 3 major
-                announcements detected.
+                {alertsData.length > 0
+                  ? `${alertsData.length} ${alertsData.length === 1 ? "active threat" : "active threats"} requiring attention. Monitor competitor activity closely.`
+                  : "No active alerts. Your competitive landscape is stable."}
               </p>
             </div>
 
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-3">
                 <AlertTriangle className="w-8 h-8 text-purple-600" />
-                <div className="text-2xl font-bold text-purple-900">9.8/10</div>
+                <div className="text-2xl font-bold text-purple-900">
+                  {isLoading ? (
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  ) : (
+                    `${highestThreat.toFixed(1)}/10`
+                  )}
+                </div>
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">
                 Highest Threat
               </h3>
               <p className="text-sm text-gray-700">
-                OpenAI GPT-5 with $300B valuation poses existential competitive
-                threat. Immediate strategic response required.
+                {alertsData.length > 0
+                  ? `${alertsData[0].company} poses ${alertsData[0].riskLevel} competitive threat. Recommend immediate response strategy.`
+                  : "No threats detected. Monitor competitors to track risks."}
               </p>
             </div>
 
             <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-3">
                 <CheckCircle className="w-8 h-8 text-green-600" />
-                <div className="text-2xl font-bold text-green-900">12</div>
+                <div className="text-2xl font-bold text-green-900">
+                  {isLoading ? (
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  ) : (
+                    researchData.length
+                  )}
+                </div>
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">
                 Reports Generated
               </h3>
               <p className="text-sm text-gray-700">
-                Comprehensive intelligence reports completed this week. All
-                high-priority competitors covered.
+                {researchData.length > 0
+                  ? `Comprehensive intelligence reports completed. ${researchData.length} ${researchData.length === 1 ? "report" : "reports"} available.`
+                  : "No reports generated yet. Start researching companies to create reports."}
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Learning Loop Section */}
+        <div className="mb-12">
+          <LearningLoop
+            onInsightApplied={(insight) => {
+              // Track insight application for analytics
+              if (typeof window !== "undefined" && (window as any).gtag) {
+                (window as any).gtag("event", "insight_applied", {
+                  event_category: "learning",
+                  event_label: insight.type || "unknown",
+                  value: insight.confidence || 0,
+                });
+              }
+
+              // Could also dispatch to state management or show toast notification
+              // For now, we'll just track the event
+            }}
+          />
         </div>
 
         {/* Quick Actions */}

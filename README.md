@@ -22,8 +22,31 @@ git clone https://github.com/yourusername/enterprise-cia
 cd enterprise-cia
 cp .env.example .env
 # Add your You.com API key to .env
+
+# Option 1: Use unified startup script (recommended)
+./start.sh
+
+# Option 2: Use Docker Compose for all services
 docker-compose up
+
+# Option 3: Start services manually
+# Terminal 1: Start Docker services
+docker-compose up postgres redis
+
+# Terminal 2: Start backend
+./scripts/start_backend.sh
+
+# Terminal 3: Start frontend
+npm run dev
+
 # Open http://localhost:3456
+```
+
+**To stop all services:**
+
+```bash
+./stop.sh              # Stop backend and frontend
+./stop.sh --docker     # Also stop Docker services (PostgreSQL, Redis)
 ```
 
 ---

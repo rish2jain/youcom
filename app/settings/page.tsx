@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense, lazy } from "react";
 import {
   Eye,
   EyeOff,
@@ -11,9 +11,27 @@ import {
   Bell,
   Palette,
 } from "lucide-react";
-import APIToggle from "@/components/APIToggle";
-import PersonalPlaybooks from "@/components/PersonalPlaybooks";
-import { APIUsageDashboard } from "@/components/APIUsageDashboard";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import { useNotificationContext } from "@/app/notifications/NotificationProvider";
+
+// Lazy load heavy components for better performance
+const APIToggle = lazy(() =>
+  import("@/components/APIToggle").then((module) => ({
+    default: module.default,
+  }))
+);
+
+const PersonalPlaybooks = lazy(() =>
+  import("@/components/PersonalPlaybooks").then((module) => ({
+    default: module.default,
+  }))
+);
+
+const APIUsageDashboard = lazy(() =>
+  import("@/components/APIUsageDashboard").then((module) => ({
+    default: module.APIUsageDashboard,
+  }))
+);
 
 export default function SettingsPage() {
   const [apiKey, setApiKey] = useState("");
@@ -23,6 +41,7 @@ export default function SettingsPage() {
     "idle" | "success" | "error"
   >("idle");
   const [useLiveData, setUseLiveData] = useState(false);
+  const { addNotification } = useNotificationContext();
 
   // Notification settings
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -57,7 +76,12 @@ export default function SettingsPage() {
 
   const handleSaveSettings = () => {
     // Save settings logic here
-    alert("Settings saved successfully!");
+    addNotification({
+      type: "success",
+      message: "Settings saved successfully!",
+      autoClose: true,
+      duration: 3000,
+    });
   };
 
   return (
@@ -181,11 +205,15 @@ export default function SettingsPage() {
       {/* Data Source Toggle */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Data Source</h2>
-        <APIToggle
-          useLiveData={useLiveData}
-          onToggle={setUseLiveData}
-          hasApiKey={!!apiKey && connectionStatus === "success"}
-        />
+        <Suspense
+          fallback={<LoadingSkeleton variant="widget" className="h-16" />}
+        >
+          <APIToggle
+            useLiveData={useLiveData}
+            onToggle={setUseLiveData}
+            hasApiKey={!!apiKey && connectionStatus === "success"}
+          />
+        </Suspense>
       </div>
 
       {/* Notification Settings */}
@@ -263,13 +291,44 @@ export default function SettingsPage() {
       </div>
 
       {/* Personal Playbooks */}
-      <PersonalPlaybooks
-        onSelectPlaybook={(id) => console.log("Selected playbook:", id)}
-        onCreatePlaybook={() => console.log("Create playbook")}
-      />
+      <Suspense
+        fallback={
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <LoadingSkeleton variant="card" count={3} className="mb-4" />
+          </div>
+        }
+      >
+        <PersonalPlaybooks
+          onSelectPlaybook={(id) => {
+            // Track playbook selection for analytics
+            if (typeof window !== "undefined" && (window as any).gtag) {
+              (window as any).gtag("event", "playbook_selected", {
+                event_category: "settings",
+                event_label: id,
+              });
+            }
+          }}
+          onCreatePlaybook={() => {
+            // Track playbook creation intent
+            if (typeof window !== "undefined" && (window as any).gtag) {
+              (window as any).gtag("event", "playbook_create_clicked", {
+                event_category: "settings",
+              });
+            }
+          }}
+        />
+      </Suspense>
 
       {/* API Usage Metrics */}
-      <APIUsageDashboard />
+      <Suspense
+        fallback={
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <LoadingSkeleton variant="dashboard" count={2} className="mb-4" />
+          </div>
+        }
+      >
+        <APIUsageDashboard />
+      </Suspense>
     </div>
   );
 }

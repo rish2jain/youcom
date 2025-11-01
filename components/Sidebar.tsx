@@ -11,7 +11,9 @@ import {
   AdjustmentsHorizontalIcon,
   Bars3Icon,
   XMarkIcon,
+  UsersIcon,
 } from "@heroicons/react/24/outline";
+import { useRoutePrefetching } from "@/lib/hooks/useRoutePrefetching";
 
 interface SidebarItem {
   id: string;
@@ -35,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { handleLinkHover, handleLinkLeave } = useRoutePrefetching();
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -50,6 +53,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       icon: HomeIcon,
       href: "/demo",
       description: "4-API orchestration showcase",
+    },
+    {
+      id: "tribe-demo",
+      label: "Tribe Interface",
+      icon: UsersIcon,
+      href: "/tribe-demo",
+      description: "Role-based UI adaptation demo",
     },
     {
       id: "research",
@@ -123,6 +133,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               key={item.id}
               href={item.href}
               onClick={() => setIsMobileOpen(false)}
+              onMouseEnter={() => handleLinkHover(item.href)}
+              onMouseLeave={() => handleLinkLeave(item.href)}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-left ${
                 isActive
                   ? "bg-blue-600 text-white shadow-lg transform scale-105 border border-blue-700"

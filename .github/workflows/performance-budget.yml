@@ -1,0 +1,300 @@
+name: Performance Budget Validation
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: "0 2 * * *"
+
+jobs:
+  performance-budget:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        environment: [staging, production]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: ${{ matrix.environment }}
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+
+      - name: Validate Performance Budgets
+        id: budget-validation
+        run: |
+          node scripts/validate-performance-budgets.js ${{ matrix.environment }}
+          echo "validation-result=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload Performance Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-report-${{ matrix.environment }}
+          path: |
+            performance-budget-report.json
+            .lighthouse-report.json
+          retention-days: 30
+
+      - name: Comment PR with Performance Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            try {
+              const reportPath = 'performance-budget-report.json';
+              if (fs.existsSync(reportPath)) {
+                const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+                
+                const formatMetricValue = (metric, value) => {
+                  switch (metric) {
+                    case 'bundleSize':
+                      return `${Math.round(value / 1024)}KB`;
+                    case 'lcp':
+                    case 'fid':
+                    case 'fcp':
+                    case 'ttfb':
+                      return `${Math.round(value)}ms`;
+                    case 'cls':
+                      return value.toFixed(3);
+                    default:
+                      return value.toString();
+                  }
+                };
+                
+                let comment = `## 📊 Performance Budget Report - ${{ matrix.environment }}\n\n`;
+                comment += `**Score:** ${report.score}/100\n`;
+                comment += `**Status:** ${report.passed ? '✅ PASSED' : '❌ FAILED'}\n`;
+                comment += `**Environment:** ${report.environment}\n\n`;
+                
+                if (report.violations.length > 0) {
+                  comment += `### 🚨 Budget Violations\n\n`;
+                  report.violations.forEach(violation => {
+                    const icon = violation.severity === 'critical' ? '🚨' : '⚠️';
+                    comment += `${icon} **${violation.metric.toUpperCase()}**: ${formatMetricValue(violation.metric, violation.actual)} `;
+                    comment += `(budget: ${formatMetricValue(violation.metric, violation.budget)}) - `;
+                    comment += `${violation.overagePercent.toFixed(1)}% over budget\n`;
+                  });
+                  comment += '\n';
+                }
+                
+                if (report.warnings.length > 0) {
+                  comment += `### ⚠️ Warnings\n\n`;
+                  report.warnings.forEach(warning => {
+                    comment += `⚠️ **${warning.metric.toUpperCase()}**: ${formatMetricValue(warning.metric, warning.actual)} `;
+                    comment += `(${warning.usage.toFixed(1)}% of budget)\n`;
+                  });
+                  comment += '\n';
+                }
+                
+                if (report.passed) {
+                  comment += `### ✅ All performance budgets are within limits!\n\n`;
+                } else {
+                  comment += `### 💡 Recommendations\n\n`;
+                  comment += `- Implement code splitting and lazy loading\n`;
+                  comment += `- Optimize images and assets\n`;
+                  comment += `- Reduce JavaScript bundle sizes\n`;
+                  comment += `- Improve server response times\n`;
+                  comment += `- Minimize layout shifts\n\n`;
+                }
+                
+                comment += `<details>\n<summary>View detailed report</summary>\n\n`;
+                comment += `\`\`\`json\n${JSON.stringify(report, null, 2)}\n\`\`\`\n\n`;
+                comment += `</details>\n`;
+                
+                // Find existing comment and update or create new one
+                const { data: comments } = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                });
+                
+                const existingComment = comments.find(comment => 
+                  comment.body.includes(`Performance Budget Report - ${{ matrix.environment }}`)
+                );
+                
+                if (existingComment) {
+                  await github.rest.issues.updateComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: existingComment.id,
+                    body: comment
+                  });
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    body: comment
+                  });
+                }
+              }
+            } catch (error) {
+              console.error('Failed to post performance report:', error);
+            }
+
+      - name: Fail job if budget violated
+        if: steps.budget-validation.outputs.validation-result != '0'
+        run: |
+          echo "❌ Performance budget validation failed"
+          echo "Check the performance report for details"
+          exit 1
+
+      - name: Send Slack notification on failure
+        if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: "#performance-alerts"
+          text: |
+            🚨 Performance budget violation detected!
+
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Environment: ${{ matrix.environment }}
+            Commit: ${{ github.sha }}
+
+            Check the GitHub Actions run for detailed report.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  performance-comparison:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build PR version
+        run: npm run build
+
+      - name: Run performance audit on PR
+        run: |
+          node scripts/validate-performance-budgets.js production
+          mv performance-budget-report.json pr-performance-report.json
+        continue-on-error: true
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+
+      - name: Install dependencies (base)
+        run: npm ci
+
+      - name: Build base version
+        run: npm run build
+
+      - name: Run performance audit on base
+        run: |
+          node scripts/validate-performance-budgets.js production
+          mv performance-budget-report.json base-performance-report.json
+        continue-on-error: true
+
+      - name: Compare performance reports
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            try {
+              const prReport = JSON.parse(fs.readFileSync('pr-performance-report.json', 'utf8'));
+              const baseReport = JSON.parse(fs.readFileSync('base-performance-report.json', 'utf8'));
+              
+              const formatMetricValue = (metric, value) => {
+                switch (metric) {
+                  case 'bundleSize':
+                    return `${Math.round(value / 1024)}KB`;
+                  case 'lcp':
+                  case 'fid':
+                  case 'fcp':
+                  case 'ttfb':
+                    return `${Math.round(value)}ms`;
+                  case 'cls':
+                    return value.toFixed(3);
+                  default:
+                    return value.toString();
+                }
+              };
+              
+              const calculateChange = (current, previous) => {
+                if (previous === 0) return current > 0 ? '∞' : '0';
+                return ((current - previous) / previous * 100).toFixed(1);
+              };
+              
+              let comment = `## 📊 Performance Comparison\n\n`;
+              comment += `| Metric | Base | PR | Change |\n`;
+              comment += `|--------|------|----|---------|\n`;
+              
+              // Compare scores
+              const scoreChange = calculateChange(prReport.score, baseReport.score);
+              const scoreIcon = prReport.score >= baseReport.score ? '✅' : '❌';
+              comment += `| Overall Score | ${baseReport.score}/100 | ${prReport.score}/100 | ${scoreIcon} ${scoreChange}% |\n`;
+              
+              // Compare violations
+              const prViolations = prReport.violations.length;
+              const baseViolations = baseReport.violations.length;
+              const violationChange = prViolations - baseViolations;
+              const violationIcon = violationChange <= 0 ? '✅' : '❌';
+              comment += `| Violations | ${baseViolations} | ${prViolations} | ${violationIcon} ${violationChange > 0 ? '+' : ''}${violationChange} |\n`;
+              
+              comment += `\n### Summary\n\n`;
+              
+              if (prReport.score >= baseReport.score && prViolations <= baseViolations) {
+                comment += `✅ **Performance improved or maintained**\n\n`;
+              } else {
+                comment += `❌ **Performance degraded**\n\n`;
+              }
+              
+              if (prViolations > baseViolations) {
+                comment += `⚠️ **New performance budget violations introduced**\n\n`;
+                prReport.violations.forEach(violation => {
+                  const baseViolation = baseReport.violations.find(v => v.metric === violation.metric);
+                  if (!baseViolation) {
+                    comment += `- New violation: ${violation.metric.toUpperCase()}\n`;
+                  }
+                });
+              }
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+              
+            } catch (error) {
+              console.error('Failed to compare performance reports:', error);
+            }

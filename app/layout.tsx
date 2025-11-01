@@ -6,25 +6,34 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
-import NotificationSystem from "@/components/NotificationSystem";
+import dynamic from "next/dynamic";
+
+// Import NotificationCenter dynamically to prevent SSR hydration issues
+const DynamicNotificationCenter = dynamic(
+  () => import("@/components/ClientOnlyNotificationCenter"),
+  {
+    ssr: false,
+  }
+);
 import { UserContextProvider, useUserContext } from "@/contexts/UserContext";
+import {
+  NotificationProvider,
+  useNotificationContext,
+} from "@/app/notifications/NotificationProvider";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { FloatingChatWidget } from "@/components/FloatingChatWidget";
 
-interface Notification {
-  id: string;
-  type: "success" | "error" | "info" | "warning";
-  message: string;
-  autoClose?: boolean;
-  duration?: number;
-}
+import { RouteLoadingBoundary } from "@/components/RouteLoadingBoundary";
+import { ServiceWorkerProvider } from "@/components/ServiceWorkerProvider";
+import { useRoutePrefetching } from "@/lib/hooks/useRoutePrefetching";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { isOnboarded, setUserContext, isLoaded } = useUserContext();
+  const { handleLinkHover, currentRoute } = useRoutePrefetching();
 
   // Check onboarding status on mount
   useEffect(() => {
@@ -45,6 +54,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       setShowOnboarding(true);
     }
   }, [isLoaded, isOnboarded, pathname, setUserContext]); // Fixed: Added setUserContext to dependencies
+
+  const { addNotification } = useNotificationContext();
 
   const handleOnboardingComplete = (data: {
     companyName: string;
@@ -74,19 +85,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   };
 
   const handleStartAnalysis = () => {
+    // Navigate to monitoring page where users can start analyses
+    router.push("/monitoring");
     addNotification({
       type: "info",
-      message: "Starting new competitive analysis...",
+      message: "Navigate to monitoring to start competitive analysis",
     });
-  };
-
-  const addNotification = (notification: Omit<Notification, "id">) => {
-    const id = Date.now().toString();
-    setNotifications((prev) => [...prev, { ...notification, id }]);
-  };
-
-  const removeNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   return (
@@ -109,12 +113,18 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               </span>
             </div>
           </div>
-          <main className="flex-1 overflow-auto p-6">{children}</main>
+          <main className="flex-1 overflow-auto p-6">
+            <RouteLoadingBoundary routeKey={currentRoute}>
+              {children}
+            </RouteLoadingBoundary>
+          </main>
         </div>
       </div>
-      <NotificationSystem
-        notifications={notifications}
-        onRemove={removeNotification}
+      <DynamicNotificationCenter
+        maxVisible={5}
+        showResolved={false}
+        autoHide={true}
+        position="top-right"
       />
       <OnboardingModal
         isOpen={showOnboarding}
@@ -130,12 +140,48 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Add favicon links dynamically for client component
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Remove existing favicon links if any
+    const existingLinks = document.querySelectorAll(
+      'link[rel="icon"], link[rel="apple-touch-icon"]'
+    );
+    existingLinks.forEach((link) => link.remove());
+
+    // Add favicon link
+    const favicon = document.createElement("link");
+    favicon.rel = "icon";
+    favicon.href = "/icon.svg";
+    favicon.type = "image/svg+xml";
+    document.head.appendChild(favicon);
+
+    // Add apple touch icon
+    const appleIcon = document.createElement("link");
+    appleIcon.rel = "apple-touch-icon";
+    appleIcon.href = "/apple-icon.svg";
+    appleIcon.type = "image/svg+xml";
+    document.head.appendChild(appleIcon);
+
+    // Also add for /favicon.ico to prevent 404
+    const faviconIco = document.createElement("link");
+    faviconIco.rel = "icon";
+    faviconIco.href = "/icon.svg";
+    faviconIco.type = "image/svg+xml";
+    document.head.appendChild(faviconIco);
+  }, []);
+
   return (
     <html lang="en">
       <body className="font-sans">
         <Providers>
           <UserContextProvider>
-            <LayoutContent>{children}</LayoutContent>
+            <NotificationProvider>
+              <ServiceWorkerProvider>
+                <LayoutContent>{children}</LayoutContent>
+              </ServiceWorkerProvider>
+            </NotificationProvider>
           </UserContextProvider>
         </Providers>
       </body>

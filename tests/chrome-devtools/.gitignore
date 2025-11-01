@@ -1,0 +1,14 @@
+# Test results and artifacts
+results/
+screenshots/
+
+# Environment files
+.env.test
+
+# Build outputs
+dist/
+*.js.map
+
+# TypeScript cache
+*.tsbuildinfo
+

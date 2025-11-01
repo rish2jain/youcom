@@ -26,6 +26,16 @@ import {
 import { api } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
 import { MLFeedbackPanel } from "./MLFeedbackPanel";
+import {
+  ProgressiveDisclosure,
+  DisclosureSection,
+  MetricDisplay,
+} from "./ProgressiveDisclosure";
+import {
+  CognitiveLoadOptimizer,
+  createCognitiveElement,
+  createContentSection,
+} from "./CognitiveLoadOptimizer";
 
 interface ImpactCard {
   id: number;
@@ -560,85 +570,213 @@ export function ImpactCardDisplay() {
         </div>
       </div>
 
-      {/* Impact Cards List */}
-      <div className="space-y-4 mb-6">
+      {/* Impact Cards List with Progressive Disclosure */}
+      <div className="mb-6">
         {impactErrorMessage && (
-          <div className="p-4 border border-red-200 bg-red-50 text-sm text-red-700 rounded-lg">
+          <div className="p-4 border border-red-200 bg-red-50 text-sm text-red-700 rounded-lg mb-4">
             {impactErrorMessage}
           </div>
         )}
-        {impactCards && impactCards.length > 0
-          ? impactCards.slice(0, 3).map((card: ImpactCard) => (
-              <div
-                key={card.id}
-                onClick={() => setSelectedCard(card)}
-                className="p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h4 className="font-medium text-gray-900">
-                      {card.competitor_name}
-                    </h4>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${getRiskColor(
-                          card.risk_level
-                        )}`}
-                      >
-                        {card.risk_level.toUpperCase()} RISK
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        Score: {card.risk_score}/100
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div
-                      className="text-2xl font-bold"
-                      style={{ color: getRiskGaugeColor(card.risk_score) }}
-                    >
-                      {card.risk_score}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {card.total_sources} sources
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Credibility: {(card.credibility_score * 100).toFixed(0)}%
-                    </div>
-                  </div>
-                </div>
 
-                <div className="text-sm text-gray-600 mb-2">
-                  <Clock className="w-3 h-3 inline mr-1" />
-                  {new Date(card.created_at).toLocaleString()}
-                </div>
+        {impactCards && impactCards.length > 0 ? (
+          <ProgressiveDisclosure
+            title="🎯 Recent Impact Cards"
+            subtitle="AI-powered competitive intelligence analysis"
+            mode="analyst"
+            levels={[
+              {
+                id: "critical-alerts",
+                title: "Critical Competitive Threats",
+                defaultExpanded: true,
+                badge: `${impactCards.length} cards`,
+                priority: "critical",
+                cognitiveWeight: 8,
+                content: (
+                  <DisclosureSection>
+                    <div className="space-y-4">
+                      {impactCards.slice(0, 2).map((card: ImpactCard) => (
+                        <div
+                          key={card.id}
+                          onClick={() => setSelectedCard(card)}
+                          className="p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow bg-white"
+                        >
+                          {/* Level 1: Critical insight + action */}
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <h4 className="font-medium text-gray-900">
+                                {card.competitor_name}
+                              </h4>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <span
+                                  className={`px-2 py-1 text-xs rounded-full ${getRiskColor(
+                                    card.risk_level
+                                  )}`}
+                                >
+                                  {card.risk_level.toUpperCase()} RISK
+                                </span>
+                                <span className="text-sm text-gray-600">
+                                  Score: {card.risk_score}/100
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div
+                                className="text-2xl font-bold"
+                                style={{
+                                  color: getRiskGaugeColor(card.risk_score),
+                                }}
+                              >
+                                {card.risk_score}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {card.total_sources} sources
+                              </div>
+                            </div>
+                          </div>
 
-                {card.requires_review && (
-                  <div className="mb-2 inline-flex items-center space-x-2 rounded-full bg-red-50 px-3 py-1 text-xs text-red-600">
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>Analyst review requested</span>
-                  </div>
-                )}
+                          {card.key_insights.length > 0 && (
+                            <div className="text-sm text-gray-700 mb-2">
+                              <strong>Key Insight:</strong>{" "}
+                              {card.key_insights[0]}
+                            </div>
+                          )}
 
-                {card.key_insights.length > 0 && (
-                  <div className="text-sm text-gray-700">
-                    <strong>Key Insight:</strong> {card.key_insights[0]}
-                  </div>
-                )}
-              </div>
-            ))
-          : !impactErrorMessage && (
-              <div className="text-center py-8 text-gray-500">
-                <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p>No Impact Cards generated yet.</p>
-                <p className="text-sm">
-                  Generate your first Impact Card to see You.com APIs in action!
-                </p>
-              </div>
-            )}
+                          {card.requires_review && (
+                            <div className="mb-2 inline-flex items-center space-x-2 rounded-full bg-red-50 px-3 py-1 text-xs text-red-600">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>Analyst review requested</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </DisclosureSection>
+                ),
+              },
+              {
+                id: "supporting-details",
+                title: "Supporting Evidence & Metrics",
+                badge: "Credibility scores",
+                priority: "important",
+                cognitiveWeight: 12,
+                content: (
+                  <DisclosureSection>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {impactCards.slice(0, 3).map((card: ImpactCard) => (
+                        <div
+                          key={card.id}
+                          className="p-4 bg-gray-50 rounded-lg"
+                        >
+                          <h5 className="font-medium text-gray-900 mb-2">
+                            {card.competitor_name}
+                          </h5>
+                          <div className="space-y-2">
+                            <MetricDisplay
+                              label="Credibility"
+                              value={(card.credibility_score * 100).toFixed(0)}
+                              unit="%"
+                              color="text-blue-600"
+                            />
+                            <MetricDisplay
+                              label="Confidence"
+                              value={card.confidence_score}
+                              unit="%"
+                              color="text-green-600"
+                            />
+                            <MetricDisplay
+                              label="Sources"
+                              value={card.total_sources}
+                              color="text-purple-600"
+                            />
+                          </div>
+                          <div className="text-xs text-gray-500 mt-2">
+                            <Clock className="w-3 h-3 inline mr-1" />
+                            {new Date(card.created_at).toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </DisclosureSection>
+                ),
+              },
+              {
+                id: "technical-details",
+                title: "Technical Analysis & API Usage",
+                badge: "You.com APIs",
+                priority: "supplementary",
+                cognitiveWeight: 15,
+                content: (
+                  <DisclosureSection>
+                    <div className="space-y-4">
+                      {impactCards.slice(0, 2).map((card: ImpactCard) => (
+                        <div
+                          key={card.id}
+                          className="p-4 border border-gray-200 rounded-lg"
+                        >
+                          <h5 className="font-medium text-gray-900 mb-3">
+                            {card.competitor_name} - Technical Metrics
+                          </h5>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="text-center p-2 bg-blue-50 rounded">
+                              <div className="text-lg font-bold text-blue-600">
+                                {card.api_usage.news_calls}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                News API
+                              </div>
+                            </div>
+                            <div className="text-center p-2 bg-green-50 rounded">
+                              <div className="text-lg font-bold text-green-600">
+                                {card.api_usage.search_calls}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                Search API
+                              </div>
+                            </div>
+                            <div className="text-center p-2 bg-purple-50 rounded">
+                              <div className="text-lg font-bold text-purple-600">
+                                {card.api_usage.chat_calls}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                Chat API
+                              </div>
+                            </div>
+                            <div className="text-center p-2 bg-orange-50 rounded">
+                              <div className="text-lg font-bold text-orange-600">
+                                {card.api_usage.ari_calls}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                ARI API
+                              </div>
+                            </div>
+                          </div>
+                          {card.processing_time && (
+                            <div className="text-xs text-gray-500 mt-2">
+                              Processing time: {card.processing_time}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </DisclosureSection>
+                ),
+              },
+            ]}
+          />
+        ) : (
+          !impactErrorMessage && (
+            <div className="text-center py-8 text-gray-500">
+              <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <p>No Impact Cards generated yet.</p>
+              <p className="text-sm">
+                Generate your first Impact Card to see You.com APIs in action!
+              </p>
+            </div>
+          )
+        )}
       </div>
 
-      {/* Selected Card Detail */}
+      {/* Selected Card Detail with Progressive Disclosure */}
       {selectedCard && (
         <div className="border-t pt-6">
           <div className="flex justify-between items-center mb-4">
@@ -653,73 +791,101 @@ export function ImpactCardDisplay() {
             </button>
           </div>
 
-          {/* Risk Score Gauge */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="text-center">
-              <div className="relative w-32 h-32 mx-auto mb-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        {
-                          value: selectedCard.risk_score,
-                          fill: getRiskGaugeColor(selectedCard.risk_score),
-                        },
-                        {
-                          value: 100 - selectedCard.risk_score,
-                          fill: "#e5e7eb",
-                        },
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      startAngle={90}
-                      endAngle={-270}
-                      innerRadius={40}
-                      outerRadius={60}
-                      dataKey="value"
-                    ></Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">
-                      {selectedCard.risk_score}
+          <ProgressiveDisclosure
+            title="Detailed Competitive Analysis"
+            subtitle="Comprehensive intelligence breakdown with supporting evidence"
+            mode="analyst"
+            levels={[
+              {
+                id: "executive-summary",
+                title: "Executive Summary",
+                defaultExpanded: true,
+                badge: `${selectedCard.risk_score}/100 risk`,
+                priority: "critical",
+                cognitiveWeight: 8,
+                content: (
+                  <DisclosureSection>
+                    {/* Risk Score Gauge */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                      <div className="text-center">
+                        <div className="relative w-32 h-32 mx-auto mb-2">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={[
+                                  {
+                                    value: selectedCard.risk_score,
+                                    fill: getRiskGaugeColor(
+                                      selectedCard.risk_score
+                                    ),
+                                  },
+                                  {
+                                    value: 100 - selectedCard.risk_score,
+                                    fill: "#e5e7eb",
+                                  },
+                                ]}
+                                cx="50%"
+                                cy="50%"
+                                startAngle={90}
+                                endAngle={-270}
+                                innerRadius={40}
+                                outerRadius={60}
+                                dataKey="value"
+                              ></Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="text-center">
+                              <div className="text-2xl font-bold">
+                                {selectedCard.risk_score}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Risk Score
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRiskColor(
+                            selectedCard.risk_level
+                          )}`}
+                        >
+                          {selectedCard.risk_level.toUpperCase()} RISK
+                        </div>
+                      </div>
+
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-blue-600 mb-2">
+                          {selectedCard.confidence_score}%
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Confidence Score
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          AI Analysis Confidence
+                        </div>
+                      </div>
+
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-green-600 mb-2">
+                          {selectedCard.total_sources}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Total Sources
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          News: {selectedCard.source_breakdown.news_articles} |
+                          Search: {selectedCard.source_breakdown.search_results}{" "}
+                          | Research:{" "}
+                          {selectedCard.source_breakdown.research_citations}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">Risk Score</div>
-                  </div>
-                </div>
-              </div>
-              <div
-                className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRiskColor(
-                  selectedCard.risk_level
-                )}`}
-              >
-                {selectedCard.risk_level.toUpperCase()} RISK
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">
-                {selectedCard.confidence_score}%
-              </div>
-              <div className="text-sm text-gray-600">Confidence Score</div>
-              <div className="text-xs text-gray-500 mt-1">
-                AI Analysis Confidence
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">
-                {selectedCard.total_sources}
-              </div>
-              <div className="text-sm text-gray-600">Total Sources</div>
-              <div className="text-xs text-gray-500 mt-1">
-                News: {selectedCard.source_breakdown.news_articles} | Search:{" "}
-                {selectedCard.source_breakdown.search_results} | Research:{" "}
-                {selectedCard.source_breakdown.research_citations}
-              </div>
-            </div>
-          </div>
+                  </DisclosureSection>
+                ),
+              },
+            ]}
+          />
 
           {selectedCard.source_quality && (
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">

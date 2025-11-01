@@ -30,6 +30,13 @@ class Explainability(BaseModel):
     impact_areas: List[ImpactArea] = Field(default_factory=list)
     key_insights: List[str] = Field(default_factory=list)
     source_summary: Optional[Dict[str, Any]] = None
+    
+    # Enhanced explainability indicators
+    enhanced_available: bool = Field(default=False, description="Whether enhanced explainability is available")
+    reasoning_steps_count: int = Field(default=0, description="Number of reasoning steps")
+    source_analyses_count: int = Field(default=0, description="Number of source analyses")
+    uncertainty_detections_count: int = Field(default=0, description="Number of uncertainty detections")
+    human_validation_recommended: bool = Field(default=False, description="Whether human validation is recommended")
 
 class SourceBreakdown(BaseModel):
     news_articles: int = 0

@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc, func
 
-from app.models.benchmarking import BenchmarkResult, BenchmarkComparison, MetricsSnapshot
+from app.models.benchmarking import BenchmarkResult as BenchmarkResultModel, BenchmarkComparison, MetricsSnapshot
 from app.models.notification import NotificationRule, NotificationLog
 from app.services.benchmark_calculator import benchmark_calculator, BenchmarkResult
 from app.services.metrics_aggregator import metrics_aggregator, MetricDataPoint
@@ -504,41 +504,53 @@ class BenchmarkingIntegrationService:
             }
     
     async def _get_recent_benchmark_alerts(self, hours: int = 24) -> List[BenchmarkAlert]:
-        """Get recent benchmark alerts (simulated from stored comparisons)."""
+        """Get recent benchmark alerts from stored benchmark results."""
         try:
             cutoff_time = datetime.utcnow() - timedelta(hours=hours)
             
-            # Get recent benchmark comparisons that indicate poor performance
+            # Get recent benchmark results that indicate poor performance
             result = await self.db.execute(
-                select(BenchmarkComparison)
+                select(BenchmarkResultModel)
                 .where(
                     and_(
-                        BenchmarkComparison.created_at >= cutoff_time,
-                        BenchmarkComparison.percentile_rank <= 25  # Bottom quartile
+                        BenchmarkResultModel.calculated_at >= cutoff_time,
+                        BenchmarkResultModel.percentile_rank <= 25  # Bottom quartile
                     )
                 )
-                .order_by(desc(BenchmarkComparison.created_at))
+                .order_by(desc(BenchmarkResultModel.calculated_at))
             )
             
-            comparisons = result.scalars().all()
+            benchmark_results = result.scalars().all()
             
             # Convert to benchmark alerts
             alerts = []
-            for comp in comparisons:
-                severity = "critical" if comp.percentile_rank <= 10 else "high"
+            for br in benchmark_results:
+                severity = "critical" if br.percentile_rank <= 10 else "high"
+                
+                # Calculate deviation from industry average if available
+                deviation_percentage = 0.0
+                if br.industry_average and br.industry_average > 0:
+                    deviation_percentage = abs(
+                        (br.metric_value - br.industry_average) / br.industry_average * 100
+                    )
+                
+                # Extract recommendations from meta_data if available
+                recommendations = []
+                if br.meta_data and isinstance(br.meta_data, dict):
+                    recommendations = br.meta_data.get("recommendations", [])
                 
                 alert = BenchmarkAlert(
-                    metric_name=comp.metric_name,
-                    entity_id=comp.entity_id,
-                    entity_type=comp.entity_type,
+                    metric_name=br.metric_type,
+                    entity_id=br.entity_name,
+                    entity_type=br.entity_type,
                     alert_type="benchmark_deviation",
                     severity=severity,
-                    current_value=comp.entity_value,
-                    benchmark_value=comp.benchmark_value,
-                    percentile_rank=comp.percentile_rank,
-                    deviation_percentage=abs((comp.entity_value - comp.benchmark_value) / comp.benchmark_value * 100) if comp.benchmark_value > 0 else 0,
-                    triggered_at=comp.created_at,
-                    recommendations=comp.improvement_recommendations or []
+                    current_value=br.metric_value,
+                    benchmark_value=br.industry_average or br.metric_value,
+                    percentile_rank=br.percentile_rank,
+                    deviation_percentage=deviation_percentage,
+                    triggered_at=br.calculated_at or br.created_at,
+                    recommendations=recommendations
                 )
                 
                 alerts.append(alert)
@@ -572,8 +584,8 @@ class BenchmarkingIntegrationService:
         try:
             # Get recent benchmark metrics count
             recent_metrics = await self.db.execute(
-                select(func.count(BenchmarkResult.id))
-                .where(BenchmarkResult.calculated_at >= datetime.utcnow() - timedelta(hours=24))
+                select(func.count(BenchmarkResultModel.id))
+                .where(BenchmarkResultModel.calculated_at >= datetime.utcnow() - timedelta(hours=24))
             )
             
             metrics_24h = recent_metrics.scalar() or 0

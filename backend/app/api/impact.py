@@ -38,6 +38,34 @@ logger = logging.getLogger(__name__)
 # Import shared limiter
 from app.rate_limiter import limiter
 
+async def save_action_recommendations_if_present(impact_data: dict, impact_card_id: int, db: AsyncSession) -> None:
+    """Helper function to save action recommendations if they exist in the impact data."""
+    if (impact_data.get("recommended_actions") and 
+        isinstance(impact_data["recommended_actions"], list) and
+        len(impact_data["recommended_actions"]) > 0 and
+        isinstance(impact_data["recommended_actions"][0], dict) and
+        "confidence_score" in impact_data["recommended_actions"][0]):
+        
+        try:
+            from app.services.decision_engine import DecisionEngine
+            from app.schemas.action_recommendation import ActionRecommendationCreate
+            
+            decision_engine = DecisionEngine(db)
+            
+            # Convert dict recommendations to ActionRecommendationCreate objects
+            recommendations = []
+            for rec_data in impact_data["recommended_actions"]:
+                rec = ActionRecommendationCreate(**rec_data)
+                recommendations.append(rec)
+            
+            # Save recommendations to database
+            await decision_engine.save_recommendations(recommendations, impact_card_id)
+            logger.info(f"✅ Saved {len(recommendations)} action recommendations to database")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to save action recommendations: {str(e)}")
+            # Continue without failing the entire request
+
 
 @router.get("/comparison")
 async def compare_impact_cards(
@@ -138,6 +166,9 @@ async def generate_impact_card(
         db.add(db_impact_card)
         await db.commit()
         await db.refresh(db_impact_card)
+        
+        # Save Decision Engine recommendations to database if they exist
+        await save_action_recommendations_if_present(impact_data, db_impact_card.id, db)
         
         logger.info(f"✅ Impact Card generated successfully for {request.competitor_name}")
         await emit_progress(
@@ -240,6 +271,9 @@ async def generate_impact_card_for_watch(
         db.add(db_impact_card)
         await db.commit()
         await db.refresh(db_impact_card)
+        
+        # Save Decision Engine recommendations to database if they exist
+        await save_action_recommendations_if_present(impact_data, db_impact_card.id, db)
         
         logger.info(f"✅ Impact Card generated for watch item {watch_id}")
         await emit_progress(

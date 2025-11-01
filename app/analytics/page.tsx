@@ -1,13 +1,97 @@
 "use client";
 
 import { useState } from "react";
-import { EnhancedAnalytics } from "@/components/EnhancedAnalytics";
+import dynamic from "next/dynamic";
 import { Activity, CheckCircle, AlertTriangle, Clock } from "lucide-react";
-import { APIOrchestrationStory } from "@/components/APIOrchestrationStory";
-import { LiveAPITracker } from "@/components/LiveAPITracker";
-import { HowItWorksSection } from "@/components/HowItWorksSection";
-import { ValidationSection } from "@/components/ValidationSection";
-import { ErrorStateDemo } from "@/components/ErrorStates";
+
+// Optimized dynamic imports with loading states and error handling for analytics page
+const EnhancedAnalytics = dynamic(
+  () =>
+    import("@/components/EnhancedAnalytics").then((mod) => ({
+      default: mod.EnhancedAnalytics,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    ),
+  }
+);
+
+const APIOrchestrationStory = dynamic(
+  () =>
+    import("@/components/APIOrchestrationStory").then((mod) => ({
+      default: mod.APIOrchestrationStory,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-48 bg-gray-100 rounded-lg animate-pulse"></div>
+    ),
+  }
+);
+
+const LiveAPITracker = dynamic(
+  () =>
+    import("@/components/LiveAPITracker").then((mod) => ({
+      default: mod.LiveAPITracker,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-32 bg-gray-100 rounded-lg animate-pulse"></div>
+    ),
+  }
+);
+
+const HowItWorksSection = dynamic(
+  () =>
+    import("@/components/HowItWorksSection").then((mod) => ({
+      default: mod.HowItWorksSection,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-40 bg-gray-100 rounded-lg animate-pulse"></div>
+    ),
+  }
+);
+
+const ValidationSection = dynamic(
+  () =>
+    import("@/components/ValidationSection").then((mod) => ({
+      default: mod.ValidationSection,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-36 bg-gray-100 rounded-lg animate-pulse"></div>
+    ),
+  }
+);
+
+const ErrorStateDemo = dynamic(
+  () =>
+    import("@/components/ErrorStates").then((mod) => ({
+      default: mod.ErrorStateDemo,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-28 bg-gray-100 rounded-lg animate-pulse"></div>
+    ),
+  }
+);
 
 interface APIActivity {
   apiName: string;
@@ -56,8 +140,10 @@ export default function AnalyticsPage() {
   ).toFixed(1);
 
   const getStatusIcon = (status: string) => {
-    if (status === "healthy") return <CheckCircle className="w-5 h-5 text-green-600" />;
-    if (status === "warning") return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
+    if (status === "healthy")
+      return <CheckCircle className="w-5 h-5 text-green-600" />;
+    if (status === "warning")
+      return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
     return <AlertTriangle className="w-5 h-5 text-red-600" />;
   };
 
@@ -75,7 +161,8 @@ export default function AnalyticsPage() {
           <div>
             <h2 className="text-xl font-bold mb-1">🔧 For Technical Teams</h2>
             <p className="text-purple-50 text-sm">
-              <strong>So what?</strong> Monitor API performance, validate data quality, and understand system architecture in real-time.
+              <strong>So what?</strong> Monitor API performance, validate data
+              quality, and understand system architecture in real-time.
             </p>
           </div>
           <div className="text-right">
@@ -134,7 +221,9 @@ export default function AnalyticsPage() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Calls (24h):</span>
-                  <span className="font-semibold text-gray-900">{api.calls24h}</span>
+                  <span className="font-semibold text-gray-900">
+                    {api.calls24h}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Success Rate:</span>
@@ -192,8 +281,8 @@ export default function AnalyticsPage() {
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-lg text-white">
           <h2 className="text-2xl font-bold mb-2">🔧 Technical Deep Dive</h2>
           <p className="text-blue-50">
-            Explore how our 4-API orchestration works under the hood with live tracking,
-            validation, and error handling demonstrations.
+            Explore how our 4-API orchestration works under the hood with live
+            tracking, validation, and error handling demonstrations.
           </p>
         </div>
 

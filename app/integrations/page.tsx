@@ -1,6 +1,14 @@
 "use client";
 
-import { IntegrationManager } from "@/components/IntegrationManager";
+import { Suspense, lazy } from "react";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+
+// Lazy load IntegrationManager for better performance
+const IntegrationManager = lazy(() =>
+  import("@/components/IntegrationManager").then((module) => ({
+    default: module.IntegrationManager,
+  }))
+);
 
 export default function IntegrationsPage() {
   return (
@@ -14,7 +22,18 @@ export default function IntegrationsPage() {
           automatically.
         </p>
       </div>
-      <IntegrationManager />
+
+      <Suspense
+        fallback={
+          <LoadingSkeleton
+            variant="card"
+            count={4}
+            className="bg-white p-6 rounded-lg shadow-sm"
+          />
+        }
+      >
+        <IntegrationManager />
+      </Suspense>
     </div>
   );
 }

@@ -1,0 +1,83 @@
+{
+  "bundleSize": {
+    "passed": false,
+    "details": {
+      "initial": {
+        "size": 7212,
+        "target": 1048576,
+        "passed": true
+      },
+      "total": {
+        "size": 3209807,
+        "target": 2097152,
+        "passed": false
+      },
+      "reduction": {
+        "achieved": 99.6561050415039,
+        "target": 40,
+        "passed": true
+      }
+    }
+  },
+  "loadTime": {
+    "passed": true,
+    "details": {
+      "lcp": {
+        "value": 2200,
+        "target": 2500,
+        "passed": true
+      },
+      "fcp": {
+        "value": 1500,
+        "target": 1800,
+        "passed": true
+      },
+      "ttfb": {
+        "value": 600,
+        "target": 800,
+        "passed": true
+      }
+    }
+  },
+  "coreWebVitals": {
+    "passed": true,
+    "details": {
+      "lcp": {
+        "value": 2300,
+        "target": 2500,
+        "passed": true
+      },
+      "fid": {
+        "value": 85,
+        "target": 100,
+        "passed": true
+      },
+      "cls": {
+        "value": 0.08,
+        "target": 0.1,
+        "passed": true
+      }
+    }
+  },
+  "caching": {
+    "passed": true,
+    "details": {
+      "hitRate": {
+        "value": 87,
+        "target": 80,
+        "passed": true
+      },
+      "averageLoadTime": {
+        "value": 145,
+        "target": 200,
+        "passed": true
+      }
+    }
+  },
+  "overall": {
+    "passed": false,
+    "score": 75,
+    "passedCategories": 3,
+    "totalCategories": 4
+  }
+}

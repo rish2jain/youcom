@@ -1,704 +1,434 @@
-"""
-Predictive Intelligence Engine - Week 3 Implementation
-ML-powered forecasting and predictive analytics for competitive intelligence.
-"""
+"""Predictive Intelligence service for competitor pattern analysis and predictions."""
 
 import logging
-import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
-try:
-    import numpy as np
-except ImportError:
-    np = None
-from enum import Enum
+from typing import List, Dict, Any, Optional, Tuple
+from sqlalchemy.orm import Session
+from sqlalchemy import and_, desc, func
+import numpy as np
+from collections import defaultdict, Counter
+
+from app.models.predictive_intelligence import CompetitorPattern, PredictedEvent, PatternEvent
+from app.models.impact_card import ImpactCard
+# from app.services.you_client import YouClient
 
 logger = logging.getLogger(__name__)
 
-class PredictionType(Enum):
-    FUNDING_ROUND = "funding_round"
-    PRODUCT_LAUNCH = "product_launch"
-    MARKET_EXPANSION = "market_expansion"
-    ACQUISITION = "acquisition"
-    PARTNERSHIP = "partnership"
-    COMPETITIVE_MOVE = "competitive_move"
-
-class ConfidenceLevel(Enum):
-    LOW = "low"          # < 60%
-    MEDIUM = "medium"    # 60-80%
-    HIGH = "high"        # > 80%
-
-@dataclass
-class PredictionResult:
-    """Result of a predictive analysis"""
-    prediction_type: PredictionType
-    target_company: str
-    prediction: str
-    probability: float
-    confidence_level: ConfidenceLevel
-    time_horizon: str  # e.g., "3_months", "6_months", "1_year"
-    supporting_factors: List[str]
-    risk_factors: List[str]
-    generated_at: datetime = field(default_factory=datetime.utcnow)
-    model_version: str = "1.0.0"
-
-class FundingPredictor:
-    """Predicts funding rounds and investment activities"""
-    
-    def __init__(self):
-        self.model_version = "1.0.0"
-        
-        # Funding indicators and weights
-        self.funding_indicators = {
-            "hiring_surge": 0.25,
-            "product_development": 0.20,
-            "market_expansion": 0.15,
-            "partnership_activity": 0.15,
-            "media_coverage": 0.10,
-            "executive_changes": 0.10,
-            "patent_activity": 0.05
-        }
-    
-    async def predict_funding_round(
-        self,
-        company: str,
-        company_data: Dict[str, Any],
-        market_data: Dict[str, Any],
-        time_horizon: str = "6_months"
-    ) -> PredictionResult:
-        """Predict likelihood of funding round"""
-        
-        # Extract signals from data
-        signals = self._extract_funding_signals(company_data, market_data)
-        
-        # Calculate probability
-        probability = self._calculate_funding_probability(signals)
-        
-        # Determine confidence level
-        confidence = self._determine_confidence_level(probability, signals)
-        
-        # Generate supporting factors
-        supporting_factors = self._identify_supporting_factors(signals)
-        
-        # Identify risk factors
-        risk_factors = self._identify_funding_risks(signals, market_data)
-        
-        return PredictionResult(
-            prediction_type=PredictionType.FUNDING_ROUND,
-            target_company=company,
-            prediction=f"Funding round probability: {probability:.1%}",
-            probability=probability,
-            confidence_level=confidence,
-            time_horizon=time_horizon,
-            supporting_factors=supporting_factors,
-            risk_factors=risk_factors
-        )
-    
-    def _extract_funding_signals(self, company_data: Dict, market_data: Dict) -> Dict[str, float]:
-        """Extract funding-related signals from data"""
-        signals = {}
-        
-        # Hiring surge indicator
-        hiring_mentions = self._count_mentions(company_data, ["hiring", "jobs", "team", "employees"])
-        signals["hiring_surge"] = min(hiring_mentions / 10, 1.0)  # Normalize to 0-1
-        
-        # Product development indicator
-        product_mentions = self._count_mentions(company_data, ["product", "feature", "launch", "development"])
-        signals["product_development"] = min(product_mentions / 15, 1.0)
-        
-        # Market expansion indicator
-        expansion_mentions = self._count_mentions(company_data, ["expansion", "market", "international", "growth"])
-        signals["market_expansion"] = min(expansion_mentions / 8, 1.0)
-        
-        # Partnership activity
-        partnership_mentions = self._count_mentions(company_data, ["partnership", "collaboration", "alliance"])
-        signals["partnership_activity"] = min(partnership_mentions / 5, 1.0)
-        
-        # Media coverage
-        media_score = company_data.get("media_coverage_score", 0.5)
-        signals["media_coverage"] = media_score
-        
-        # Executive changes
-        exec_mentions = self._count_mentions(company_data, ["CEO", "CTO", "executive", "leadership"])
-        signals["executive_changes"] = min(exec_mentions / 3, 1.0)
-        
-        # Patent activity (simplified)
-        patent_score = company_data.get("innovation_score", 0.3)
-        signals["patent_activity"] = patent_score
-        
-        return signals
-    
-    def _calculate_funding_probability(self, signals: Dict[str, float]) -> float:
-        """Calculate funding probability based on signals"""
-        weighted_score = 0.0
-        
-        for indicator, weight in self.funding_indicators.items():
-            signal_strength = signals.get(indicator, 0.0)
-            weighted_score += signal_strength * weight
-        
-        # Apply sigmoid function for probability
-        if np:
-            probability = 1 / (1 + np.exp(-5 * (weighted_score - 0.5)))
-        else:
-            # Fallback without numpy
-            import math
-            probability = 1 / (1 + math.exp(-5 * (weighted_score - 0.5)))
-        
-        return probability
-    
-    def _determine_confidence_level(self, probability: float, signals: Dict[str, float]) -> ConfidenceLevel:
-        """Determine confidence level based on probability and signal strength"""
-        # Calculate signal consistency
-        signal_values = list(signals.values())
-        if np and signal_values:
-            signal_consistency = 1 - np.std(signal_values)
-        elif signal_values:
-            # Fallback standard deviation calculation
-            mean_val = sum(signal_values) / len(signal_values)
-            variance = sum((x - mean_val) ** 2 for x in signal_values) / len(signal_values)
-            signal_consistency = 1 - (variance ** 0.5)
-        else:
-            signal_consistency = 0
-        
-        # Adjust confidence based on consistency
-        if probability > 0.8 and signal_consistency > 0.7:
-            return ConfidenceLevel.HIGH
-        elif probability > 0.6 and signal_consistency > 0.5:
-            return ConfidenceLevel.MEDIUM
-        else:
-            return ConfidenceLevel.LOW
-    
-    def _identify_supporting_factors(self, signals: Dict[str, float]) -> List[str]:
-        """Identify key supporting factors for funding prediction"""
-        factors = []
-        
-        # Sort signals by strength
-        sorted_signals = sorted(signals.items(), key=lambda x: x[1], reverse=True)
-        
-        for signal, strength in sorted_signals[:3]:  # Top 3 signals
-            if strength > 0.6:
-                factor_descriptions = {
-                    "hiring_surge": "Significant hiring activity indicates growth preparation",
-                    "product_development": "Active product development suggests expansion plans",
-                    "market_expansion": "Market expansion signals indicate scaling needs",
-                    "partnership_activity": "Partnership activity suggests strategic growth",
-                    "media_coverage": "Increased media attention indicates market momentum",
-                    "executive_changes": "Leadership changes may indicate growth phase",
-                    "patent_activity": "Innovation activity suggests R&D investment"
-                }
-                factors.append(factor_descriptions.get(signal, f"Strong {signal} indicator"))
-        
-        return factors
-    
-    def _identify_funding_risks(self, signals: Dict[str, float], market_data: Dict) -> List[str]:
-        """Identify risk factors that might affect funding"""
-        risks = []
-        
-        # Market condition risks
-        market_sentiment = market_data.get("market_sentiment", 0.5)
-        if market_sentiment < 0.4:
-            risks.append("Challenging market conditions may affect investor appetite")
-        
-        # Competition risks
-        competitive_pressure = market_data.get("competitive_pressure", 0.5)
-        if competitive_pressure > 0.7:
-            risks.append("High competitive pressure may impact valuation")
-        
-        # Signal consistency risks
-        signal_values = list(signals.values())
-        if signal_values:
-            if np:
-                std_dev = np.std(signal_values)
-            else:
-                mean_val = sum(signal_values) / len(signal_values)
-                variance = sum((x - mean_val) ** 2 for x in signal_values) / len(signal_values)
-                std_dev = variance ** 0.5
-            
-            if std_dev > 0.3:
-                risks.append("Mixed signals may indicate uncertainty in growth trajectory")
-        
-        return risks
-    
-    def _count_mentions(self, data: Dict, keywords: List[str]) -> int:
-        """Count mentions of keywords in data"""
-        count = 0
-        
-        # Search in various data fields
-        search_fields = ["articles", "news", "content", "description"]
-        
-        for field in search_fields:
-            if field in data:
-                field_data = data[field]
-                if isinstance(field_data, list):
-                    for item in field_data:
-                        if isinstance(item, dict):
-                            text = " ".join(str(v) for v in item.values()).lower()
-                        else:
-                            text = str(item).lower()
-                        
-                        for keyword in keywords:
-                            count += text.count(keyword.lower())
-                elif isinstance(field_data, str):
-                    text = field_data.lower()
-                    for keyword in keywords:
-                        count += text.count(keyword.lower())
-        
-        return count
-
-class ProductLaunchPredictor:
-    """Predicts product launches and feature releases"""
-    
-    def __init__(self):
-        self.model_version = "1.0.0"
-        
-        self.launch_indicators = {
-            "development_activity": 0.30,
-            "hiring_patterns": 0.20,
-            "patent_filings": 0.15,
-            "beta_testing": 0.15,
-            "marketing_activity": 0.10,
-            "partnership_announcements": 0.10
-        }
-    
-    async def predict_product_launch(
-        self,
-        company: str,
-        company_data: Dict[str, Any],
-        time_horizon: str = "3_months"
-    ) -> PredictionResult:
-        """Predict likelihood of product launch"""
-        
-        # Extract product launch signals
-        signals = self._extract_launch_signals(company_data)
-        
-        # Calculate probability
-        probability = self._calculate_launch_probability(signals)
-        
-        # Determine confidence
-        confidence = self._determine_launch_confidence(probability, signals)
-        
-        # Generate insights
-        supporting_factors = self._identify_launch_factors(signals)
-        risk_factors = self._identify_launch_risks(signals, company_data)
-        
-        return PredictionResult(
-            prediction_type=PredictionType.PRODUCT_LAUNCH,
-            target_company=company,
-            prediction=f"Product launch probability: {probability:.1%}",
-            probability=probability,
-            confidence_level=confidence,
-            time_horizon=time_horizon,
-            supporting_factors=supporting_factors,
-            risk_factors=risk_factors
-        )
-    
-    def _extract_launch_signals(self, company_data: Dict) -> Dict[str, float]:
-        """Extract product launch signals"""
-        signals = {}
-        
-        # Development activity
-        dev_keywords = ["development", "building", "creating", "engineering", "coding"]
-        dev_mentions = self._count_keywords(company_data, dev_keywords)
-        signals["development_activity"] = min(dev_mentions / 12, 1.0)
-        
-        # Hiring patterns (technical roles)
-        hiring_keywords = ["engineer", "developer", "designer", "product manager"]
-        hiring_mentions = self._count_keywords(company_data, hiring_keywords)
-        signals["hiring_patterns"] = min(hiring_mentions / 8, 1.0)
-        
-        # Patent filings
-        patent_keywords = ["patent", "intellectual property", "innovation", "technology"]
-        patent_mentions = self._count_keywords(company_data, patent_keywords)
-        signals["patent_filings"] = min(patent_mentions / 5, 1.0)
-        
-        # Beta testing
-        beta_keywords = ["beta", "testing", "preview", "early access", "pilot"]
-        beta_mentions = self._count_keywords(company_data, beta_keywords)
-        signals["beta_testing"] = min(beta_mentions / 4, 1.0)
-        
-        # Marketing activity
-        marketing_keywords = ["announcement", "reveal", "unveil", "coming soon"]
-        marketing_mentions = self._count_keywords(company_data, marketing_keywords)
-        signals["marketing_activity"] = min(marketing_mentions / 6, 1.0)
-        
-        # Partnership announcements
-        partnership_keywords = ["partnership", "integration", "collaboration"]
-        partnership_mentions = self._count_keywords(company_data, partnership_keywords)
-        signals["partnership_announcements"] = min(partnership_mentions / 3, 1.0)
-        
-        return signals
-    
-    def _calculate_launch_probability(self, signals: Dict[str, float]) -> float:
-        """Calculate product launch probability"""
-        weighted_score = sum(
-            signals.get(indicator, 0.0) * weight
-            for indicator, weight in self.launch_indicators.items()
-        )
-        
-        # Apply sigmoid transformation
-        if np:
-            probability = 1 / (1 + np.exp(-4 * (weighted_score - 0.6)))
-        else:
-            import math
-            probability = 1 / (1 + math.exp(-4 * (weighted_score - 0.6)))
-        
-        return probability
-    
-    def _determine_launch_confidence(self, probability: float, signals: Dict[str, float]) -> ConfidenceLevel:
-        """Determine confidence level for launch prediction"""
-        if signals:
-            signal_values = list(signals.values())
-            if np:
-                signal_strength = np.mean(signal_values)
-            else:
-                signal_strength = sum(signal_values) / len(signal_values)
-        else:
-            signal_strength = 0
-        
-        if probability > 0.75 and signal_strength > 0.6:
-            return ConfidenceLevel.HIGH
-        elif probability > 0.55 and signal_strength > 0.4:
-            return ConfidenceLevel.MEDIUM
-        else:
-            return ConfidenceLevel.LOW
-    
-    def _identify_launch_factors(self, signals: Dict[str, float]) -> List[str]:
-        """Identify supporting factors for launch prediction"""
-        factors = []
-        
-        factor_descriptions = {
-            "development_activity": "High development activity indicates active product work",
-            "hiring_patterns": "Technical hiring suggests product development scaling",
-            "patent_filings": "Patent activity indicates innovative product features",
-            "beta_testing": "Beta testing activity suggests near-term launch",
-            "marketing_activity": "Marketing preparation indicates launch readiness",
-            "partnership_announcements": "Partnership activity may support product launch"
-        }
-        
-        for signal, strength in signals.items():
-            if strength > 0.5:
-                factors.append(factor_descriptions.get(signal, f"Strong {signal} signal"))
-        
-        return factors[:4]  # Top 4 factors
-    
-    def _identify_launch_risks(self, signals: Dict[str, float], company_data: Dict) -> List[str]:
-        """Identify risks that might delay launch"""
-        risks = []
-        
-        # Development risks
-        if signals.get("development_activity", 0) < 0.3:
-            risks.append("Low development activity may indicate delays")
-        
-        # Resource risks
-        if signals.get("hiring_patterns", 0) > 0.8:
-            risks.append("Rapid hiring may indicate resource constraints")
-        
-        # Market timing risks
-        competitive_mentions = self._count_keywords(company_data, ["competitor", "competition", "rival"])
-        if competitive_mentions > 10:
-            risks.append("High competitive activity may affect launch timing")
-        
-        return risks
-    
-    def _count_keywords(self, data: Dict, keywords: List[str]) -> int:
-        """Count keyword mentions in data"""
-        count = 0
-        data_str = json.dumps(data).lower()
-        
-        for keyword in keywords:
-            count += data_str.count(keyword.lower())
-        
-        return count
-
-class MarketExpansionPredictor:
-    """Predicts market expansion and geographic growth"""
-    
-    def __init__(self):
-        self.model_version = "1.0.0"
-        
-        self.expansion_indicators = {
-            "geographic_mentions": 0.25,
-            "regulatory_activity": 0.20,
-            "local_partnerships": 0.20,
-            "hiring_in_target_markets": 0.15,
-            "localization_efforts": 0.10,
-            "market_research_activity": 0.10
-        }
-    
-    async def predict_market_expansion(
-        self,
-        company: str,
-        company_data: Dict[str, Any],
-        target_markets: List[str] = None,
-        time_horizon: str = "1_year"
-    ) -> PredictionResult:
-        """Predict likelihood of market expansion"""
-        
-        if not target_markets:
-            target_markets = ["Europe", "Asia", "Latin America"]
-        
-        # Extract expansion signals
-        signals = self._extract_expansion_signals(company_data, target_markets)
-        
-        # Calculate probability
-        probability = self._calculate_expansion_probability(signals)
-        
-        # Determine confidence
-        confidence = self._determine_expansion_confidence(probability, signals)
-        
-        # Generate insights
-        supporting_factors = self._identify_expansion_factors(signals, target_markets)
-        risk_factors = self._identify_expansion_risks(signals, company_data)
-        
-        return PredictionResult(
-            prediction_type=PredictionType.MARKET_EXPANSION,
-            target_company=company,
-            prediction=f"Market expansion probability: {probability:.1%}",
-            probability=probability,
-            confidence_level=confidence,
-            time_horizon=time_horizon,
-            supporting_factors=supporting_factors,
-            risk_factors=risk_factors
-        )
-    
-    def _extract_expansion_signals(self, company_data: Dict, target_markets: List[str]) -> Dict[str, float]:
-        """Extract market expansion signals"""
-        signals = {}
-        
-        # Geographic mentions
-        geo_mentions = 0
-        for market in target_markets:
-            geo_mentions += self._count_keywords(company_data, [market.lower()])
-        signals["geographic_mentions"] = min(geo_mentions / 8, 1.0)
-        
-        # Regulatory activity
-        regulatory_keywords = ["regulation", "compliance", "legal", "licensing"]
-        regulatory_mentions = self._count_keywords(company_data, regulatory_keywords)
-        signals["regulatory_activity"] = min(regulatory_mentions / 6, 1.0)
-        
-        # Local partnerships
-        partnership_keywords = ["local partner", "regional", "distributor", "reseller"]
-        partnership_mentions = self._count_keywords(company_data, partnership_keywords)
-        signals["local_partnerships"] = min(partnership_mentions / 4, 1.0)
-        
-        # Hiring in target markets
-        hiring_keywords = ["international", "global", "remote", "distributed"]
-        hiring_mentions = self._count_keywords(company_data, hiring_keywords)
-        signals["hiring_in_target_markets"] = min(hiring_mentions / 5, 1.0)
-        
-        # Localization efforts
-        localization_keywords = ["localization", "translation", "local", "regional"]
-        localization_mentions = self._count_keywords(company_data, localization_keywords)
-        signals["localization_efforts"] = min(localization_mentions / 3, 1.0)
-        
-        # Market research activity
-        research_keywords = ["market research", "market analysis", "opportunity"]
-        research_mentions = self._count_keywords(company_data, research_keywords)
-        signals["market_research_activity"] = min(research_mentions / 4, 1.0)
-        
-        return signals
-    
-    def _calculate_expansion_probability(self, signals: Dict[str, float]) -> float:
-        """Calculate market expansion probability"""
-        weighted_score = sum(
-            signals.get(indicator, 0.0) * weight
-            for indicator, weight in self.expansion_indicators.items()
-        )
-        
-        # Apply sigmoid transformation
-        if np:
-            probability = 1 / (1 + np.exp(-3 * (weighted_score - 0.5)))
-        else:
-            import math
-            probability = 1 / (1 + math.exp(-3 * (weighted_score - 0.5)))
-        
-        return probability
-    
-    def _determine_expansion_confidence(self, probability: float, signals: Dict[str, float]) -> ConfidenceLevel:
-        """Determine confidence level for expansion prediction"""
-        signal_count = sum(1 for s in signals.values() if s > 0.3)
-        
-        if probability > 0.7 and signal_count >= 4:
-            return ConfidenceLevel.HIGH
-        elif probability > 0.5 and signal_count >= 2:
-            return ConfidenceLevel.MEDIUM
-        else:
-            return ConfidenceLevel.LOW
-    
-    def _identify_expansion_factors(self, signals: Dict[str, float], target_markets: List[str]) -> List[str]:
-        """Identify supporting factors for expansion prediction"""
-        factors = []
-        
-        if signals.get("geographic_mentions", 0) > 0.5:
-            factors.append(f"Increased mentions of target markets: {', '.join(target_markets)}")
-        
-        if signals.get("regulatory_activity", 0) > 0.4:
-            factors.append("Regulatory preparation indicates expansion planning")
-        
-        if signals.get("local_partnerships", 0) > 0.4:
-            factors.append("Local partnership activity suggests market entry strategy")
-        
-        if signals.get("hiring_in_target_markets", 0) > 0.3:
-            factors.append("International hiring indicates expansion preparation")
-        
-        return factors
-    
-    def _identify_expansion_risks(self, signals: Dict[str, float], company_data: Dict) -> List[str]:
-        """Identify risks for market expansion"""
-        risks = []
-        
-        # Regulatory risks
-        if signals.get("regulatory_activity", 0) > 0.7:
-            risks.append("High regulatory activity may indicate compliance challenges")
-        
-        # Resource risks
-        total_signal_strength = sum(signals.values())
-        if total_signal_strength < 1.5:
-            risks.append("Limited expansion signals may indicate resource constraints")
-        
-        # Competition risks
-        competitive_mentions = self._count_keywords(company_data, ["competition", "competitive"])
-        if competitive_mentions > 8:
-            risks.append("High competitive activity in target markets")
-        
-        return risks
-    
-    def _count_keywords(self, data: Dict, keywords: List[str]) -> int:
-        """Count keyword mentions in data"""
-        count = 0
-        data_str = json.dumps(data).lower()
-        
-        for keyword in keywords:
-            count += data_str.count(keyword.lower())
-        
-        return count
 
 class PredictiveIntelligenceEngine:
-    """Main predictive intelligence engine coordinating all predictors"""
+    """Engine for analyzing competitor patterns and generating predictions."""
     
-    def __init__(self):
-        self.funding_predictor = FundingPredictor()
-        self.product_predictor = ProductLaunchPredictor()
-        self.market_predictor = MarketExpansionPredictor()
+    def __init__(self, db: Session, you_client = None):
+        self.db = db
+        self.you_client = you_client  # Optional You.com client for future enhancements
         
-        self.engine_version = "1.0.0"
+        # Pattern analysis configuration
+        self.min_pattern_frequency = 2  # Minimum occurrences to consider a pattern
+        self.pattern_confidence_threshold = 0.6  # Minimum confidence for valid patterns
+        self.prediction_horizon_days = 90  # How far ahead to predict
+        
+        # Event type mappings for pattern recognition
+        self.event_type_keywords = {
+            "product_launch": ["launch", "release", "announce", "unveil", "introduce"],
+            "pricing_change": ["price", "pricing", "cost", "discount", "premium"],
+            "partnership": ["partner", "collaboration", "alliance", "joint", "merger"],
+            "funding": ["funding", "investment", "raise", "series", "valuation"],
+            "expansion": ["expand", "growth", "market", "international", "new region"],
+            "acquisition": ["acquire", "acquisition", "buy", "purchase", "takeover"],
+            "leadership": ["ceo", "cto", "hire", "appointment", "leadership", "executive"]
+        }
     
-    async def generate_comprehensive_predictions(
-        self,
-        company: str,
-        company_data: Dict[str, Any],
-        market_data: Dict[str, Any] = None,
-        prediction_types: List[PredictionType] = None
-    ) -> Dict[str, Any]:
-        """Generate comprehensive predictions for a company"""
+    def analyze_competitor_patterns(self, competitor_name: str) -> List[CompetitorPattern]:
+        """Analyze historical data to identify competitor behavior patterns."""
+        logger.info(f"Analyzing patterns for competitor: {competitor_name}")
         
-        if market_data is None:
-            market_data = {}
+        # Get historical impact cards for this competitor
+        impact_cards = self.db.query(ImpactCard).filter(
+            ImpactCard.competitor_name == competitor_name
+        ).order_by(ImpactCard.created_at).all()
         
-        if prediction_types is None:
-            prediction_types = [
-                PredictionType.FUNDING_ROUND,
-                PredictionType.PRODUCT_LAUNCH,
-                PredictionType.MARKET_EXPANSION
-            ]
+        if len(impact_cards) < self.min_pattern_frequency:
+            logger.info(f"Insufficient data for pattern analysis: {len(impact_cards)} cards")
+            return []
+        
+        # Group events by type and analyze patterns
+        patterns = []
+        event_groups = self._group_events_by_type(impact_cards)
+        
+        for event_type, events in event_groups.items():
+            if len(events) >= self.min_pattern_frequency:
+                pattern = self._analyze_event_sequence(competitor_name, event_type, events)
+                if pattern and pattern.confidence >= self.pattern_confidence_threshold:
+                    patterns.append(pattern)
+        
+        # Save patterns to database
+        for pattern in patterns:
+            existing_pattern = self.db.query(CompetitorPattern).filter(
+                and_(
+                    CompetitorPattern.competitor_name == competitor_name,
+                    CompetitorPattern.pattern_type == pattern.pattern_type
+                )
+            ).first()
+            
+            if existing_pattern:
+                # Update existing pattern
+                existing_pattern.sequence = pattern.sequence
+                existing_pattern.frequency = pattern.frequency
+                existing_pattern.confidence = pattern.confidence
+                existing_pattern.last_observed = pattern.last_observed
+                existing_pattern.updated_at = datetime.utcnow()
+            else:
+                # Create new pattern
+                self.db.add(pattern)
+        
+        self.db.commit()
+        logger.info(f"Identified {len(patterns)} patterns for {competitor_name}")
+        return patterns
+    
+    def _group_events_by_type(self, impact_cards: List[ImpactCard]) -> Dict[str, List[ImpactCard]]:
+        """Group impact cards by event type based on content analysis."""
+        event_groups = defaultdict(list)
+        
+        for card in impact_cards:
+            event_type = self._classify_event_type(card)
+            event_groups[event_type].append(card)
+        
+        return dict(event_groups)
+    
+    def _classify_event_type(self, impact_card: ImpactCard) -> str:
+        """Classify an impact card into an event type based on content."""
+        # Analyze key insights and recommended actions for keywords
+        content_text = ""
+        
+        if impact_card.key_insights:
+            content_text += " ".join(impact_card.key_insights)
+        
+        if impact_card.recommended_actions:
+            for action in impact_card.recommended_actions:
+                if isinstance(action, dict) and "description" in action:
+                    content_text += " " + action["description"]
+        
+        content_text = content_text.lower()
+        
+        # Score each event type based on keyword matches
+        type_scores = {}
+        for event_type, keywords in self.event_type_keywords.items():
+            score = sum(1 for keyword in keywords if keyword in content_text)
+            if score > 0:
+                type_scores[event_type] = score
+        
+        # Return the highest scoring type, or "general" if no matches
+        if type_scores:
+            return max(type_scores.items(), key=lambda x: x[1])[0]
+        else:
+            return "general"
+    
+    def _analyze_event_sequence(self, competitor_name: str, event_type: str, events: List[ImpactCard]) -> Optional[CompetitorPattern]:
+        """Analyze a sequence of events to identify patterns."""
+        if len(events) < 2:
+            return None
+        
+        # Sort events by date
+        events.sort(key=lambda x: x.created_at)
+        
+        # Calculate intervals between events
+        intervals = []
+        for i in range(1, len(events)):
+            interval = (events[i].created_at - events[i-1].created_at).days
+            intervals.append(interval)
+        
+        # Calculate pattern characteristics
+        avg_interval = np.mean(intervals) if intervals else 0
+        interval_std = np.std(intervals) if len(intervals) > 1 else 0
+        
+        # Calculate confidence based on consistency of intervals
+        confidence = max(0.0, 1.0 - (interval_std / max(avg_interval, 1)))
+        confidence = min(confidence, 1.0)
+        
+        # Create pattern sequence
+        sequence = []
+        for event in events:
+            sequence.append({
+                "date": event.created_at.isoformat(),
+                "risk_score": event.risk_score,
+                "key_insights": event.key_insights[:2] if event.key_insights else [],
+                "impact_areas": event.impact_areas[:3] if event.impact_areas else []
+            })
+        
+        # Identify contributing factors
+        contributing_factors = self._identify_contributing_factors(events)
+        
+        # Create pattern object
+        pattern = CompetitorPattern(
+            competitor_name=competitor_name,
+            pattern_type=event_type,
+            sequence=sequence,
+            frequency=len(events),
+            confidence=confidence,
+            average_duration=int(avg_interval),
+            typical_intervals=intervals,
+            first_observed=events[0].created_at,
+            last_observed=events[-1].created_at,
+            contributing_factors=contributing_factors,
+            success_indicators=self._identify_success_indicators(events)
+        )
+        
+        return pattern
+    
+    def _identify_contributing_factors(self, events: List[ImpactCard]) -> List[str]:
+        """Identify common factors that contribute to this pattern."""
+        factors = []
+        
+        # Analyze impact areas across events
+        all_impact_areas = []
+        for event in events:
+            if event.impact_areas:
+                all_impact_areas.extend(event.impact_areas)
+        
+        # Find most common impact areas
+        if all_impact_areas:
+            impact_counter = Counter(all_impact_areas)
+            common_impacts = [area for area, count in impact_counter.most_common(3)]
+            factors.extend(common_impacts)
+        
+        # Analyze risk score patterns
+        risk_scores = [event.risk_score for event in events]
+        avg_risk = np.mean(risk_scores)
+        
+        if avg_risk > 80:
+            factors.append("high_risk_events")
+        elif avg_risk > 60:
+            factors.append("medium_risk_events")
+        
+        return factors[:5]  # Limit to top 5 factors
+    
+    def _identify_success_indicators(self, events: List[ImpactCard]) -> List[str]:
+        """Identify indicators of pattern success."""
+        indicators = []
+        
+        # Analyze trend in risk scores
+        risk_scores = [event.risk_score for event in events]
+        if len(risk_scores) > 1:
+            risk_trend = np.polyfit(range(len(risk_scores)), risk_scores, 1)[0]
+            if risk_trend > 5:
+                indicators.append("increasing_risk_trend")
+            elif risk_trend < -5:
+                indicators.append("decreasing_risk_trend")
+        
+        # Analyze confidence scores
+        confidence_scores = [event.confidence_score for event in events]
+        avg_confidence = np.mean(confidence_scores)
+        
+        if avg_confidence > 80:
+            indicators.append("high_confidence_pattern")
+        
+        return indicators
+    
+    def generate_predictions(self, competitor_name: str) -> List[PredictedEvent]:
+        """Generate predictions based on identified patterns."""
+        logger.info(f"Generating predictions for competitor: {competitor_name}")
+        
+        # Get active patterns for this competitor
+        patterns = self.db.query(CompetitorPattern).filter(
+            and_(
+                CompetitorPattern.competitor_name == competitor_name,
+                CompetitorPattern.is_active == True
+            )
+        ).all()
         
         predictions = []
         
-        # Generate predictions based on requested types
-        if PredictionType.FUNDING_ROUND in prediction_types:
-            funding_prediction = await self.funding_predictor.predict_funding_round(
-                company, company_data, market_data
+        for pattern in patterns:
+            prediction = self._generate_pattern_prediction(pattern)
+            if prediction:
+                predictions.append(prediction)
+        
+        # Save predictions to database
+        for prediction in predictions:
+            # Check if similar prediction already exists
+            existing = self.db.query(PredictedEvent).filter(
+                and_(
+                    PredictedEvent.competitor_name == competitor_name,
+                    PredictedEvent.event_type == prediction.event_type,
+                    PredictedEvent.status == "pending"
+                )
+            ).first()
+            
+            if not existing:
+                self.db.add(prediction)
+        
+        self.db.commit()
+        logger.info(f"Generated {len(predictions)} predictions for {competitor_name}")
+        return predictions
+    
+    def _generate_pattern_prediction(self, pattern: CompetitorPattern) -> Optional[PredictedEvent]:
+        """Generate a prediction based on a specific pattern."""
+        if not pattern.sequence or pattern.frequency < 2:
+            return None
+        
+        # Calculate time since last occurrence
+        time_since_last = (datetime.utcnow() - pattern.last_observed).days
+        
+        # Estimate next occurrence based on average interval
+        if pattern.average_duration and pattern.average_duration > 0:
+            days_until_next = max(0, pattern.average_duration - time_since_last)
+            predicted_date = datetime.utcnow() + timedelta(days=days_until_next)
+            
+            # Calculate probability based on pattern consistency and timing
+            timing_factor = min(1.0, time_since_last / pattern.average_duration)
+            probability = pattern.confidence * timing_factor
+            
+            # Adjust probability based on pattern frequency
+            frequency_factor = min(1.0, pattern.frequency / 5.0)  # Normalize to max 5 occurrences
+            probability *= (0.5 + 0.5 * frequency_factor)
+            
+            # Generate timeframe description
+            if days_until_next <= 7:
+                timeframe = "within 1 week"
+            elif days_until_next <= 30:
+                timeframe = "within 1 month"
+            elif days_until_next <= 90:
+                timeframe = "within 3 months"
+            else:
+                timeframe = "beyond 3 months"
+            
+            # Generate reasoning
+            reasoning = [
+                f"Pattern observed {pattern.frequency} times with {pattern.confidence:.1%} consistency",
+                f"Average interval between occurrences: {pattern.average_duration} days",
+                f"Last occurrence: {time_since_last} days ago",
+                f"Contributing factors: {', '.join(pattern.contributing_factors[:3])}"
+            ]
+            
+            # Create prediction
+            prediction = PredictedEvent(
+                pattern_id=pattern.id,
+                competitor_name=pattern.competitor_name,
+                event_type=pattern.pattern_type,
+                description=self._generate_prediction_description(pattern),
+                probability=min(probability, 1.0),
+                confidence=pattern.confidence,
+                predicted_date=predicted_date,
+                timeframe=timeframe,
+                earliest_date=predicted_date - timedelta(days=7),
+                latest_date=predicted_date + timedelta(days=14),
+                reasoning=reasoning,
+                trigger_events=self._identify_trigger_events(pattern),
+                supporting_evidence=pattern.sequence[-2:],  # Last 2 occurrences as evidence
+                expires_at=datetime.utcnow() + timedelta(days=self.prediction_horizon_days)
             )
-            predictions.append(funding_prediction)
+            
+            return prediction
         
-        if PredictionType.PRODUCT_LAUNCH in prediction_types:
-            product_prediction = await self.product_predictor.predict_product_launch(
-                company, company_data
-            )
-            predictions.append(product_prediction)
+        return None
+    
+    def _generate_prediction_description(self, pattern: CompetitorPattern) -> str:
+        """Generate a human-readable description for the prediction."""
+        event_type_descriptions = {
+            "product_launch": f"{pattern.competitor_name} is likely to announce a new product or feature",
+            "pricing_change": f"{pattern.competitor_name} may adjust their pricing strategy",
+            "partnership": f"{pattern.competitor_name} could announce a new partnership or collaboration",
+            "funding": f"{pattern.competitor_name} might raise additional funding",
+            "expansion": f"{pattern.competitor_name} may expand into new markets or regions",
+            "acquisition": f"{pattern.competitor_name} could make an acquisition",
+            "leadership": f"{pattern.competitor_name} may announce leadership changes"
+        }
         
-        if PredictionType.MARKET_EXPANSION in prediction_types:
-            expansion_prediction = await self.market_predictor.predict_market_expansion(
-                company, company_data
-            )
-            predictions.append(expansion_prediction)
+        return event_type_descriptions.get(
+            pattern.pattern_type,
+            f"{pattern.competitor_name} may engage in {pattern.pattern_type} activity"
+        )
+    
+    def _identify_trigger_events(self, pattern: CompetitorPattern) -> List[str]:
+        """Identify events that typically trigger this pattern."""
+        triggers = []
         
-        # Analyze prediction patterns
-        prediction_summary = self._analyze_prediction_patterns(predictions)
+        # Analyze contributing factors to identify triggers
+        if pattern.contributing_factors:
+            for factor in pattern.contributing_factors[:3]:
+                if "high_risk" in factor:
+                    triggers.append("Increased competitive pressure")
+                elif "market" in factor.lower():
+                    triggers.append("Market dynamics change")
+                elif "product" in factor.lower():
+                    triggers.append("Product development cycle")
         
-        return {
-            "company": company,
-            "generated_at": datetime.utcnow().isoformat(),
-            "predictions": [self._prediction_to_dict(p) for p in predictions],
-            "prediction_summary": prediction_summary,
-            "engine_metadata": {
-                "engine_version": self.engine_version,
-                "predictors_used": [p.value for p in prediction_types],
-                "total_predictions": len(predictions)
+        # Add pattern-specific triggers
+        pattern_triggers = {
+            "product_launch": ["Development completion", "Market opportunity"],
+            "pricing_change": ["Competitive pressure", "Market positioning"],
+            "partnership": ["Strategic alignment", "Market expansion needs"],
+            "funding": ["Growth requirements", "Market opportunity"],
+            "expansion": ["Market saturation", "Growth strategy"],
+            "acquisition": ["Strategic gaps", "Market consolidation"],
+            "leadership": ["Growth phase", "Strategic changes"]
+        }
+        
+        if pattern.pattern_type in pattern_triggers:
+            triggers.extend(pattern_triggers[pattern.pattern_type])
+        
+        return triggers[:5]  # Limit to top 5 triggers
+    
+    def validate_prediction(self, prediction_id: int, actual_outcome: str, accuracy_score: float) -> bool:
+        """Validate a prediction with actual outcome."""
+        prediction = self.db.query(PredictedEvent).filter(
+            PredictedEvent.id == prediction_id
+        ).first()
+        
+        if not prediction:
+            return False
+        
+        prediction.actual_outcome = actual_outcome
+        prediction.accuracy_score = accuracy_score
+        prediction.validation_date = datetime.utcnow()
+        prediction.status = "validated" if accuracy_score > 0.5 else "invalidated"
+        
+        self.db.commit()
+        logger.info(f"Validated prediction {prediction_id} with accuracy {accuracy_score}")
+        return True
+    
+    def get_active_predictions(self, competitor_name: str = None) -> List[PredictedEvent]:
+        """Get active predictions, optionally filtered by competitor."""
+        query = self.db.query(PredictedEvent).filter(
+            PredictedEvent.status == "pending",
+            PredictedEvent.expires_at > datetime.utcnow()
+        )
+        
+        if competitor_name:
+            query = query.filter(PredictedEvent.competitor_name == competitor_name)
+        
+        return query.order_by(desc(PredictedEvent.probability)).all()
+    
+    def get_pattern_accuracy_metrics(self) -> Dict[str, Any]:
+        """Get accuracy metrics for pattern predictions."""
+        validated_predictions = self.db.query(PredictedEvent).filter(
+            PredictedEvent.status.in_(["validated", "invalidated"]),
+            PredictedEvent.accuracy_score.isnot(None)
+        ).all()
+        
+        if not validated_predictions:
+            return {"total_predictions": 0, "accuracy": 0.0}
+        
+        total_predictions = len(validated_predictions)
+        accurate_predictions = sum(1 for p in validated_predictions if p.accuracy_score > 0.5)
+        overall_accuracy = accurate_predictions / total_predictions
+        
+        # Accuracy by event type
+        type_accuracy = defaultdict(list)
+        for prediction in validated_predictions:
+            type_accuracy[prediction.event_type].append(prediction.accuracy_score)
+        
+        type_metrics = {}
+        for event_type, scores in type_accuracy.items():
+            type_metrics[event_type] = {
+                "count": len(scores),
+                "accuracy": np.mean(scores),
+                "confidence": np.mean([p.confidence for p in validated_predictions if p.event_type == event_type])
             }
-        }
-    
-    def _prediction_to_dict(self, prediction: PredictionResult) -> Dict[str, Any]:
-        """Convert prediction result to dictionary"""
-        return {
-            "prediction_type": prediction.prediction_type.value,
-            "target_company": prediction.target_company,
-            "prediction": prediction.prediction,
-            "probability": prediction.probability,
-            "confidence_level": prediction.confidence_level.value,
-            "time_horizon": prediction.time_horizon,
-            "supporting_factors": prediction.supporting_factors,
-            "risk_factors": prediction.risk_factors,
-            "generated_at": prediction.generated_at.isoformat(),
-            "model_version": prediction.model_version
-        }
-    
-    def _analyze_prediction_patterns(self, predictions: List[PredictionResult]) -> Dict[str, Any]:
-        """Analyze patterns across predictions"""
-        if not predictions:
-            return {}
-        
-        # Calculate average probability
-        probabilities = [p.probability for p in predictions]
-        if np:
-            avg_probability = np.mean(probabilities)
-        else:
-            avg_probability = sum(probabilities) / len(probabilities) if probabilities else 0
-        
-        # Count confidence levels
-        confidence_counts = {}
-        for pred in predictions:
-            level = pred.confidence_level.value
-            confidence_counts[level] = confidence_counts.get(level, 0) + 1
-        
-        # Identify highest probability prediction
-        highest_prob_pred = max(predictions, key=lambda p: p.probability)
-        
-        # Identify common themes in supporting factors
-        all_factors = []
-        for pred in predictions:
-            all_factors.extend(pred.supporting_factors)
-        
-        # Simple theme identification (would be more sophisticated in production)
-        common_themes = []
-        if any("hiring" in factor.lower() for factor in all_factors):
-            common_themes.append("hiring_activity")
-        if any("product" in factor.lower() for factor in all_factors):
-            common_themes.append("product_development")
-        if any("market" in factor.lower() for factor in all_factors):
-            common_themes.append("market_activity")
         
         return {
-            "average_probability": avg_probability,
-            "confidence_distribution": confidence_counts,
-            "highest_probability_prediction": {
-                "type": highest_prob_pred.prediction_type.value,
-                "probability": highest_prob_pred.probability
-            },
-            "common_themes": common_themes,
-            "overall_activity_level": "high" if avg_probability > 0.6 else "medium" if avg_probability > 0.4 else "low"
+            "total_predictions": total_predictions,
+            "accurate_predictions": accurate_predictions,
+            "overall_accuracy": overall_accuracy,
+            "type_metrics": type_metrics
         }
-
-# Global predictive intelligence engine
-predictive_intelligence = PredictiveIntelligenceEngine()

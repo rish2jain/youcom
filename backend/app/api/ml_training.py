@@ -13,7 +13,23 @@ from pydantic import BaseModel, Field
 
 from app.database import get_db
 from app.services.ml_training_service import MLTrainingService, ModelType, TriggerType
-from app.services.ml_prediction_service import MLPredictionService, PredictionRequest, PredictionType
+from app.services.ml_prediction_service import MLPredictionService
+from enum import Enum
+
+# Placeholder classes for missing types
+class PredictionType(str, Enum):
+    RISK_SCORING = "risk_scoring"
+    CONFIDENCE_PREDICTION = "confidence_prediction"
+    IMPACT_CLASSIFICATION = "impact_classification"
+    RELEVANCE_CLASSIFICATION = "relevance_classification"
+
+class PredictionRequest:
+    def __init__(self, entity_id: str, entity_type: str, prediction_type: PredictionType, features=None, use_cache: bool = False):
+        self.entity_id = entity_id
+        self.entity_type = entity_type
+        self.prediction_type = prediction_type
+        self.features = features or {}
+        self.use_cache = use_cache
 from app.services.ml_model_registry import MLModelRegistry, ModelStatus, DeploymentStrategy, ABTestConfig
 
 router = APIRouter(prefix="/api/ml", tags=["ML Training"])
@@ -21,20 +37,22 @@ router = APIRouter(prefix="/api/ml", tags=["ML Training"])
 # Pydantic models for API requests/responses
 
 class TrainingJobRequest(BaseModel):
-    model_config = {"protected_namespaces": ()}
-
     model_type: ModelType
     trigger_type: TriggerType = TriggerType.MANUAL
     config_override: Optional[Dict[str, Any]] = None
+    
+    class Config:
+        protected_namespaces = ()
 
 class TrainingJobResponse(BaseModel):
-    model_config = {"protected_namespaces": ()}
-
     job_id: str
     model_type: str
     status: str
     created_at: str
     message: str
+    
+    class Config:
+        protected_namespaces = ()
 
 class PredictionRequestModel(BaseModel):
     entity_id: str
@@ -44,8 +62,6 @@ class PredictionRequestModel(BaseModel):
     use_cache: bool = True
 
 class PredictionResponse(BaseModel):
-    model_config = {"protected_namespaces": ()}
-
     prediction_type: str
     predicted_value: Any
     confidence_score: float
@@ -53,10 +69,11 @@ class PredictionResponse(BaseModel):
     fallback_used: bool
     processing_time_ms: float
     metadata: Dict[str, Any]
+    
+    class Config:
+        protected_namespaces = ()
 
 class ModelRegistrationRequest(BaseModel):
-    model_config = {"protected_namespaces": ()}
-
     model_type: ModelType
     version: str
     file_paths: Dict[str, str]
@@ -65,17 +82,19 @@ class ModelRegistrationRequest(BaseModel):
     tags: Optional[List[str]] = None
     description: str = ""
     deployment_strategy: DeploymentStrategy = DeploymentStrategy.IMMEDIATE
+    
+    class Config:
+        protected_namespaces = ()
 
 class ModelDeploymentRequest(BaseModel):
-    model_config = {"protected_namespaces": ()}
-
     model_id: str
     deployment_strategy: Optional[DeploymentStrategy] = None
     ab_test_config: Optional[Dict[str, Any]] = None
+    
+    class Config:
+        protected_namespaces = ()
 
 class ABTestConfigModel(BaseModel):
-    model_config = {"protected_namespaces": ()}
-
     test_id: str
     model_a_version: str
     model_b_version: str
@@ -84,13 +103,17 @@ class ABTestConfigModel(BaseModel):
     end_date: datetime
     success_metrics: List[str]
     minimum_samples: int = 100
+    
+    class Config:
+        protected_namespaces = ()
 
 class RollbackRequest(BaseModel):
-    model_config = {"protected_namespaces": ()}
-
     model_type: ModelType
     target_version: Optional[str] = None
     reason: str = "Manual rollback"
+    
+    class Config:
+        protected_namespaces = ()
 
 # Training endpoints
 

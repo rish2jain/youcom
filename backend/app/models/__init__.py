@@ -72,3 +72,22 @@ from .obsidian_integration import (  # noqa: F401
 # Timeline and Action Tracking
 from .insight_timeline import InsightTimeline  # noqa: F401
 from .action_tracker import ActionItem  # noqa: F401
+
+# User Behavior Tracking
+from .user_behavior import (  # noqa: F401
+    UserAction, BehaviorPattern, AlertFatigueMetric, LearningLoopState
+)
+
+# Predictive Intelligence
+from .predictive_intelligence import (  # noqa: F401
+    CompetitorPattern, PredictedEvent, PatternEvent
+)
+
+# Explainability Engine
+from .explainability import (  # noqa: F401
+    ReasoningStep, SourceCredibilityAnalysis, UncertaintyDetection
+)
+
+# Collaboration Features
+from .annotation import Annotation  # noqa: F401
+from .comment_notification import CommentNotification, ConflictDetection  # noqa: F401

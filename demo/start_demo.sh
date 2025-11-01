@@ -56,6 +56,17 @@ asyncio.run(create_tables())
 echo "🌱 Seeding demo data..."
 python ../scripts/seed_demo_data.py
 
+# Kill any existing process on port 8765 before starting
+echo "🔍 Checking for existing processes on port 8765..."
+if lsof -ti:8765 > /dev/null 2>&1; then
+    echo "⚠️  Found existing process(es) on port 8765"
+    PIDS=$(lsof -ti:8765)
+    echo "🛑 Killing process(es): $PIDS"
+    kill -9 $PIDS 2>/dev/null
+    sleep 1
+    echo "✅ Port 8765 is now free"
+fi
+
 # Start backend server in background
 echo "🚀 Starting FastAPI backend server..."
 uvicorn app.main:app --host 0.0.0.0 --port 8765 --reload --env-file ../.env &
@@ -68,7 +79,7 @@ npm install
 
 # Start frontend server in background
 echo "🌐 Starting Next.js frontend server..."
-npm run dev -- --port 3000 &
+npm run dev -- --port 3456 &
 FRONTEND_PID=$!
 
 # Wait a moment for servers to start
@@ -77,7 +88,7 @@ sleep 3
 echo ""
 echo "🎉 Enterprise CIA Demo is now running!"
 echo ""
-echo "🌐 Frontend: http://localhost:3000"
+echo "🌐 Frontend: http://localhost:3456"
 echo "🔧 Backend API: http://localhost:8765"
 echo "📚 API Docs: http://localhost:8765/docs"
 echo ""

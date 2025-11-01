@@ -1,0 +1,8 @@
+This file indicates the repository has been cleaned and organized.
+
+Key directories:
+- Active documentation: docs/ and root-level README.md, CLAUDE.md, PROJECT_INDEX.md, API_REFERENCE.md
+- Archived files: Archive/ (see Archive/README.md for details)
+- Test suite: backend/tests/ (standalone tests moved to Archive/backend-tests/)
+
+For details on the cleanup, see: Archive/documentation-2025/CLEANUP_SUMMARY.md

@@ -1,0 +1,471 @@
+{
+  "timestamp": "2025-11-01T02:25:35.550Z",
+  "baseline": {
+    "timestamp": "2025-11-01T02:25:50.108Z",
+    "source": "industry_standards",
+    "measurements": {
+      "totalBundleSize": 2800000,
+      "initialLoadTime": 8000,
+      "vendorBundleSize": 1200000,
+      "applicationBundleSize": 1600000,
+      "targetReduction": 0.4,
+      "maxOptimizedSize": 500000
+    },
+    "description": "Industry standard baselines for enterprise SaaS applications"
+  },
+  "current": {
+    "totalBundleSize": 186720,
+    "vendorBundleSize": 2076296,
+    "applicationBundleSize": 716527,
+    "routeBundleSize": 18820,
+    "sharedBundleSize": 143961,
+    "bundles": {
+      "1236.e30b52c5698a7917.js": {
+        "size": 8673,
+        "type": "application",
+        "gzipEstimate": 2602
+      },
+      "136.a0e6659775cb6ea4.js": {
+        "size": 11925,
+        "type": "application",
+        "gzipEstimate": 3578
+      },
+      "1940.1c42293ecf351f84.js": {
+        "size": 25775,
+        "type": "application",
+        "gzipEstimate": 7733
+      },
+      "2184.39f4939c06a81089.js": {
+        "size": 450,
+        "type": "application",
+        "gzipEstimate": 135
+      },
+      "2484.726e64878a475d74.js": {
+        "size": 5526,
+        "type": "application",
+        "gzipEstimate": 1658
+      },
+      "3832.1ce3663d9fb59443.js": {
+        "size": 7644,
+        "type": "application",
+        "gzipEstimate": 2293
+      },
+      "5264.635fbec6fc6e0752.js": {
+        "size": 6775,
+        "type": "application",
+        "gzipEstimate": 2033
+      },
+      "778.c688e01efb854265.js": {
+        "size": 6182,
+        "type": "application",
+        "gzipEstimate": 1855
+      },
+      "7876.246cc18e193ae880.js": {
+        "size": 5439,
+        "type": "application",
+        "gzipEstimate": 1632
+      },
+      "8001.257a71d29c9c5321.js": {
+        "size": 450,
+        "type": "application",
+        "gzipEstimate": 135
+      },
+      "9271.f6f24455b89a7764.js": {
+        "size": 10522,
+        "type": "application",
+        "gzipEstimate": 3157
+      },
+      "analytics-d9383451e7ec7568.js": {
+        "size": 8620,
+        "type": "route",
+        "gzipEstimate": 2586
+      },
+      "charts-164ccfd2-32ead9b9064321bc.js": {
+        "size": 86886,
+        "type": "vendor",
+        "gzipEstimate": 26066
+      },
+      "charts-207d77d7-47e675ab2bb71d51.js": {
+        "size": 50980,
+        "type": "vendor",
+        "gzipEstimate": 15294
+      },
+      "charts-66b14e9f-019528e8ca18ecd1.js": {
+        "size": 37051,
+        "type": "vendor",
+        "gzipEstimate": 11115
+      },
+      "charts-9ce9d82d-c5549c799523515d.js": {
+        "size": 86186,
+        "type": "vendor",
+        "gzipEstimate": 25856
+      },
+      "charts-eef39813-5e2fd233b04bae73.js": {
+        "size": 22706,
+        "type": "vendor",
+        "gzipEstimate": 6812
+      },
+      "common-134c139f-7c696aae999e01c9.js": {
+        "size": 18460,
+        "type": "shared",
+        "gzipEstimate": 5538
+      },
+      "common-15216c44-131e080732181d18.js": {
+        "size": 6748,
+        "type": "shared",
+        "gzipEstimate": 2024
+      },
+      "common-2cfb900a-ceca1fc97dcc6fa1.js": {
+        "size": 15631,
+        "type": "shared",
+        "gzipEstimate": 4689
+      },
+      "common-32ca520c-ed7c4966bbcd2681.js": {
+        "size": 26474,
+        "type": "shared",
+        "gzipEstimate": 7942
+      },
+      "common-39d6b512-3472678be6d7c1f0.js": {
+        "size": 10530,
+        "type": "shared",
+        "gzipEstimate": 3159
+      },
+      "common-504cf0ea-b56082c59d513593.js": {
+        "size": 26929,
+        "type": "shared",
+        "gzipEstimate": 8079
+      },
+      "common-a3dad144-9c01562e15835269.js": {
+        "size": 2167,
+        "type": "shared",
+        "gzipEstimate": 650
+      },
+      "common-f3956634-70386bb3fe458ced.js": {
+        "size": 28365,
+        "type": "shared",
+        "gzipEstimate": 8510
+      },
+      "dashboard-1d5839cff0c34014.js": {
+        "size": 10200,
+        "type": "route",
+        "gzipEstimate": 3060
+      },
+      "main-816c1179b3f9edab.js": {
+        "size": 376,
+        "type": "application",
+        "gzipEstimate": 113
+      },
+      "main-app-905a8af72f93e11a.js": {
+        "size": 815,
+        "type": "application",
+        "gzipEstimate": 245
+      },
+      "nextjs-27f02048-052d1f2e6489f37c.js": {
+        "size": 13782,
+        "type": "application",
+        "gzipEstimate": 4135
+      },
+      "nextjs-362d063c-2c96f405d7f90e75.js": {
+        "size": 8010,
+        "type": "application",
+        "gzipEstimate": 2403
+      },
+      "nextjs-42bbf998-53957785a4ea23ac.js": {
+        "size": 6098,
+        "type": "application",
+        "gzipEstimate": 1829
+      },
+      "nextjs-4497f2ad-e802d717877447e9.js": {
+        "size": 30754,
+        "type": "application",
+        "gzipEstimate": 9226
+      },
+      "nextjs-4a7382ad-2aa13418a774c3cd.js": {
+        "size": 36826,
+        "type": "application",
+        "gzipEstimate": 11048
+      },
+      "nextjs-4aa88247-15778cb550688275.js": {
+        "size": 40775,
+        "type": "application",
+        "gzipEstimate": 12233
+      },
+      "nextjs-4c7823de-5a3e1c324f6edde9.js": {
+        "size": 13806,
+        "type": "application",
+        "gzipEstimate": 4142
+      },
+      "nextjs-7bad328b-5762d29cdbb13977.js": {
+        "size": 7737,
+        "type": "application",
+        "gzipEstimate": 2321
+      },
+      "nextjs-98a6762f-f409ce4d589905d5.js": {
+        "size": 45239,
+        "type": "application",
+        "gzipEstimate": 13572
+      },
+      "nextjs-9a66d3c2-d9c9f4dbbd8616e6.js": {
+        "size": 58454,
+        "type": "application",
+        "gzipEstimate": 17536
+      },
+      "nextjs-a6f90180-405fbdbc8ce39a72.js": {
+        "size": 10190,
+        "type": "application",
+        "gzipEstimate": 3057
+      },
+      "nextjs-d91c2bd6-0994e0a7ebd069d0.js": {
+        "size": 16501,
+        "type": "application",
+        "gzipEstimate": 4950
+      },
+      "nextjs-fc717cc5-ba10a3f3e47866d6.js": {
+        "size": 20266,
+        "type": "application",
+        "gzipEstimate": 6080
+      },
+      "nextjs-ff30e0d3-a25ade16e8c4bb32.js": {
+        "size": 173025,
+        "type": "application",
+        "gzipEstimate": 51908
+      },
+      "polyfills-42372ed130431b0a.js": {
+        "size": 112594,
+        "type": "application",
+        "gzipEstimate": 33778
+      },
+      "react-dc8041548a940346.js": {
+        "size": 140467,
+        "type": "vendor",
+        "gzipEstimate": 42140
+      },
+      "shared-common-528dea8b373ebf34.js": {
+        "size": 8657,
+        "type": "shared",
+        "gzipEstimate": 2597
+      },
+      "ui-25263c99-ecf21aab945c674e.js": {
+        "size": 13953,
+        "type": "vendor",
+        "gzipEstimate": 4186
+      },
+      "ui-abda2f14-fa2db2a30075eddf.js": {
+        "size": 21020,
+        "type": "vendor",
+        "gzipEstimate": 6306
+      },
+      "ui-cbdef5fd-26fc8b246f0e75b1.js": {
+        "size": 29882,
+        "type": "vendor",
+        "gzipEstimate": 8965
+      },
+      "utils-0bc5b059-41db94c03563f70e.js": {
+        "size": 4272,
+        "type": "application",
+        "gzipEstimate": 1282
+      },
+      "utils-576e7658-a1ccf5593ab03566.js": {
+        "size": 2912,
+        "type": "application",
+        "gzipEstimate": 874
+      },
+      "utils-934691c8-d2ca2544aed3bd60.js": {
+        "size": 3147,
+        "type": "application",
+        "gzipEstimate": 944
+      },
+      "utils-ad6a2f20-92d96ee884e0be74.js": {
+        "size": 21587,
+        "type": "application",
+        "gzipEstimate": 6476
+      },
+      "vendors-0297662d-b4a241bf66ac838e.js": {
+        "size": 31556,
+        "type": "vendor",
+        "gzipEstimate": 9467
+      },
+      "vendors-052d92a9-4478b547f53bd84a.js": {
+        "size": 45145,
+        "type": "vendor",
+        "gzipEstimate": 13544
+      },
+      "vendors-0925edb1-4e551fe56e6f7e86.js": {
+        "size": 81718,
+        "type": "vendor",
+        "gzipEstimate": 24515
+      },
+      "vendors-108c08ca-4014718922e0a805.js": {
+        "size": 12094,
+        "type": "vendor",
+        "gzipEstimate": 3628
+      },
+      "vendors-12ce6917-bc2ce1c95561d8a8.js": {
+        "size": 13315,
+        "type": "vendor",
+        "gzipEstimate": 3995
+      },
+      "vendors-146d5169-2010e1a4cef4551f.js": {
+        "size": 21904,
+        "type": "vendor",
+        "gzipEstimate": 6571
+      },
+      "vendors-2c5a8e32-adb146a3021b8ae7.js": {
+        "size": 24232,
+        "type": "vendor",
+        "gzipEstimate": 7270
+      },
+      "vendors-377fed06-500d03ee70c3bf84.js": {
+        "size": 11980,
+        "type": "vendor",
+        "gzipEstimate": 3594
+      },
+      "vendors-3ff49df3-aef6d35d7f974f74.js": {
+        "size": 198193,
+        "type": "vendor",
+        "gzipEstimate": 59458
+      },
+      "vendors-4db7cc89-2abc99d845ca01b9.js": {
+        "size": 56500,
+        "type": "vendor",
+        "gzipEstimate": 16950
+      },
+      "vendors-5d398c8b-7b16e16da779fcc2.js": {
+        "size": 22139,
+        "type": "vendor",
+        "gzipEstimate": 6642
+      },
+      "vendors-6185be05-bb3318c36e7c4176.js": {
+        "size": 56741,
+        "type": "vendor",
+        "gzipEstimate": 17022
+      },
+      "vendors-6633164b-2eca3ca2bc954cd7.js": {
+        "size": 20362,
+        "type": "vendor",
+        "gzipEstimate": 6109
+      },
+      "vendors-7237a82e-1fd788b2094b65d2.js": {
+        "size": 21843,
+        "type": "vendor",
+        "gzipEstimate": 6553
+      },
+      "vendors-78a34c87-5ce7064585d1997f.js": {
+        "size": 10437,
+        "type": "vendor",
+        "gzipEstimate": 3131
+      },
+      "vendors-8004fc7e-360abbb6efcbd332.js": {
+        "size": 41211,
+        "type": "vendor",
+        "gzipEstimate": 12363
+      },
+      "vendors-8cbd2506-6b21c59844e3585c.js": {
+        "size": 50887,
+        "type": "vendor",
+        "gzipEstimate": 15266
+      },
+      "vendors-901bd3b1-83c6891c0c37a2a8.js": {
+        "size": 329918,
+        "type": "vendor",
+        "gzipEstimate": 98975
+      },
+      "vendors-938ded93-a574eec46ae93986.js": {
+        "size": 9702,
+        "type": "vendor",
+        "gzipEstimate": 2911
+      },
+      "vendors-93e6964d-186aac15f83b75fd.js": {
+        "size": 71172,
+        "type": "vendor",
+        "gzipEstimate": 21352
+      },
+      "vendors-b49fab05-23b31428d89de76b.js": {
+        "size": 11005,
+        "type": "vendor",
+        "gzipEstimate": 3302
+      },
+      "vendors-b9fa02b6-c41367f34a86a230.js": {
+        "size": 23503,
+        "type": "vendor",
+        "gzipEstimate": 7051
+      },
+      "vendors-bc050c32-990a57ff5d25972d.js": {
+        "size": 59981,
+        "type": "vendor",
+        "gzipEstimate": 17994
+      },
+      "vendors-be93acbf-d1e4e2a02986b2e5.js": {
+        "size": 53171,
+        "type": "vendor",
+        "gzipEstimate": 15951
+      },
+      "vendors-c0af6ace-05e13d84752a574f.js": {
+        "size": 23643,
+        "type": "vendor",
+        "gzipEstimate": 7093
+      },
+      "vendors-c0d76f48-8da900e8c7671d2b.js": {
+        "size": 38484,
+        "type": "vendor",
+        "gzipEstimate": 11545
+      },
+      "vendors-c8689bc3-9dbc8980e1c04c5e.js": {
+        "size": 65177,
+        "type": "vendor",
+        "gzipEstimate": 19553
+      },
+      "vendors-cbe1f46b-84d863e6efd3ab0d.js": {
+        "size": 43119,
+        "type": "vendor",
+        "gzipEstimate": 12936
+      },
+      "vendors-e00492a7-9dca9094180ebc4d.js": {
+        "size": 45835,
+        "type": "vendor",
+        "gzipEstimate": 13751
+      },
+      "vendors-ea1fa831-9542d21d18b510ad.js": {
+        "size": 9777,
+        "type": "vendor",
+        "gzipEstimate": 2933
+      },
+      "vendors-eb2fbf4c-a2350695105fb800.js": {
+        "size": 76368,
+        "type": "vendor",
+        "gzipEstimate": 22910
+      },
+      "webpack-d1c7e3513f850921.js": {
+        "size": 6053,
+        "type": "vendor",
+        "gzipEstimate": 1816
+      },
+      "087a318d21dbc8ed.css": {
+        "size": 65569,
+        "type": "css",
+        "gzipEstimate": 13114
+      },
+      "f055e431c58b907b.css": {
+        "size": 1313,
+        "type": "css",
+        "gzipEstimate": 263
+      }
+    },
+    "bundleCount": 86
+  },
+  "reduction": {
+    "baselineSize": 2800000,
+    "currentSize": 186720,
+    "absoluteReduction": 2613280,
+    "percentageReduction": 93.33142857142857,
+    "targetReduction": 40,
+    "meetsTarget": true
+  },
+  "budgetCompliance": {
+    "budget": 500000,
+    "actual": 186720,
+    "compliant": true,
+    "overage": 0,
+    "utilizationPercent": 37.344
+  }
+}

@@ -17,11 +17,11 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create enum types
-    op.execute("CREATE TYPE userrole AS ENUM ('viewer', 'analyst', 'admin')")
-    op.execute("CREATE TYPE workspacerole AS ENUM ('owner', 'admin', 'member', 'guest')")
-    op.execute("CREATE TYPE auditaction AS ENUM ('create', 'read', 'update', 'delete', 'login', 'logout', 'export', 'share', 'permission_change', 'api_call')")
-    op.execute("CREATE TYPE integrationtype AS ENUM ('slack', 'notion', 'salesforce', 'microsoft_teams', 'jira', 'webhook')")
+    # Create enum types (check if they exist first)
+    op.execute("DO $$ BEGIN CREATE TYPE userrole AS ENUM ('viewer', 'analyst', 'admin'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+    op.execute("DO $$ BEGIN CREATE TYPE workspacerole AS ENUM ('owner', 'admin', 'member', 'guest'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+    op.execute("DO $$ BEGIN CREATE TYPE auditaction AS ENUM ('create', 'read', 'update', 'delete', 'login', 'logout', 'export', 'share', 'permission_change', 'api_call'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+    op.execute("DO $$ BEGIN CREATE TYPE integrationtype AS ENUM ('slack', 'notion', 'salesforce', 'microsoft_teams', 'jira', 'webhook'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
 
     # Users table
     op.create_table(
@@ -31,7 +31,7 @@ def upgrade() -> None:
         sa.Column('username', sa.String(), nullable=False, unique=True, index=True),
         sa.Column('full_name', sa.String(), nullable=True),
         sa.Column('hashed_password', sa.String(), nullable=False),
-        sa.Column('role', sa.Enum('viewer', 'analyst', 'admin', name='userrole'), nullable=False, server_default='analyst'),
+        sa.Column('role', sa.Enum('viewer', 'analyst', 'admin', name='userrole', create_type=False), nullable=False, server_default='analyst'),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
         sa.Column('is_verified', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('sso_provider', sa.String(), nullable=True),
@@ -61,7 +61,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
         sa.Column('workspace_id', sa.Integer(), sa.ForeignKey('workspaces.id'), nullable=False),
         sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id'), nullable=False),
-        sa.Column('role', sa.Enum('owner', 'admin', 'member', 'guest', name='workspacerole'), nullable=False, server_default='member'),
+        sa.Column('role', sa.Enum('owner', 'admin', 'member', 'guest', name='workspacerole', create_type=False), nullable=False, server_default='member'),
         sa.Column('joined_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('invited_by', sa.Integer(), sa.ForeignKey('users.id'), nullable=True),
     )
@@ -110,7 +110,7 @@ def upgrade() -> None:
         'audit_logs',
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
         sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id'), nullable=True),
-        sa.Column('action', sa.Enum('create', 'read', 'update', 'delete', 'login', 'logout', 'export', 'share', 'permission_change', 'api_call', name='auditaction'), nullable=False),
+        sa.Column('action', sa.Enum('create', 'read', 'update', 'delete', 'login', 'logout', 'export', 'share', 'permission_change', 'api_call', name='auditaction', create_type=False), nullable=False),
         sa.Column('resource_type', sa.String(), nullable=False),
         sa.Column('resource_id', sa.Integer(), nullable=True),
         sa.Column('description', sa.Text(), nullable=True),
@@ -175,7 +175,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
         sa.Column('workspace_id', sa.Integer(), sa.ForeignKey('workspaces.id'), nullable=False),
         sa.Column('name', sa.String(), nullable=False),
-        sa.Column('type', sa.Enum('slack', 'notion', 'salesforce', 'microsoft_teams', 'jira', 'webhook', name='integrationtype'), nullable=False),
+        sa.Column('type', sa.Enum('slack', 'notion', 'salesforce', 'microsoft_teams', 'jira', 'webhook', name='integrationtype', create_type=False), nullable=False),
         sa.Column('config', sa.JSON(), nullable=False),
         sa.Column('credentials', sa.JSON(), nullable=True),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),

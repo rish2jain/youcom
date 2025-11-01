@@ -44,7 +44,7 @@ class DemoSetupResponse(BaseModel):
     demo_board_id: int
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/enhancements", tags=["enhancements"])
+router = APIRouter(prefix="/enhancements", tags=["enhancements"])
 
 # Insight Timeline & Delta Highlights
 

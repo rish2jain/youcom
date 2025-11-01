@@ -1,0 +1,213 @@
+name: Performance Budget Validation
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  performance-validation:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        environment: [staging, production]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+
+      - name: Validate performance budgets
+        run: npm run perf:validate:${{ matrix.environment }}
+        continue-on-error: true
+        id: perf-validation
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-report-${{ matrix.environment }}
+          path: performance-budget-report.md
+
+      - name: Comment PR with performance results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'performance-budget-report.md';
+
+            if (fs.existsSync(path)) {
+              const report = fs.readFileSync(path, 'utf8');
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## Performance Budget Report (${{ matrix.environment }})\n\n${report}`
+              });
+            }
+
+      - name: Fail if critical violations found
+        if: steps.perf-validation.outcome == 'failure'
+        run: |
+          echo "❌ Performance budget validation failed for ${{ matrix.environment }}"
+          echo "Check the performance report for details."
+          exit 1
+
+  bundle-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and analyze bundles
+        run: npm run build:analyze
+
+      - name: Install bundle analyzer
+        run: npm install -g webpack-bundle-analyzer
+
+      - name: Generate bundle analysis report
+        run: |
+          if [ -d ".next/static" ]; then
+            echo "# Bundle Analysis Report" > bundle-analysis.md
+            echo "" >> bundle-analysis.md
+            echo "## Bundle Sizes" >> bundle-analysis.md
+            echo "" >> bundle-analysis.md
+            
+            # Analyze JavaScript bundles
+            if [ -d ".next/static/chunks" ]; then
+              echo "### JavaScript Chunks" >> bundle-analysis.md
+              echo "" >> bundle-analysis.md
+              echo "| File | Size | Gzipped |" >> bundle-analysis.md
+              echo "|------|------|---------|" >> bundle-analysis.md
+              
+              for file in .next/static/chunks/*.js; do
+                if [ -f "$file" ]; then
+                  filename=$(basename "$file")
+                  size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
+                  gzipped=$(gzip -c "$file" | wc -c)
+                  size_kb=$((size / 1024))
+                  gzipped_kb=$((gzipped / 1024))
+                  echo "| $filename | ${size_kb}KB | ${gzipped_kb}KB |" >> bundle-analysis.md
+                fi
+              done
+              echo "" >> bundle-analysis.md
+            fi
+            
+            # Analyze CSS bundles
+            if [ -d ".next/static/css" ]; then
+              echo "### CSS Files" >> bundle-analysis.md
+              echo "" >> bundle-analysis.md
+              echo "| File | Size | Gzipped |" >> bundle-analysis.md
+              echo "|------|------|---------|" >> bundle-analysis.md
+              
+              for file in .next/static/css/*.css; do
+                if [ -f "$file" ]; then
+                  filename=$(basename "$file")
+                  size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
+                  gzipped=$(gzip -c "$file" | wc -c)
+                  size_kb=$((size / 1024))
+                  gzipped_kb=$((gzipped / 1024))
+                  echo "| $filename | ${size_kb}KB | ${gzipped_kb}KB |" >> bundle-analysis.md
+                fi
+              done
+            fi
+          else
+            echo "No build output found" > bundle-analysis.md
+          fi
+
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: bundle-analysis.md
+
+      - name: Comment PR with bundle analysis
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'bundle-analysis.md';
+
+            if (fs.existsSync(path)) {
+              const report = fs.readFileSync(path, 'utf8');
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## Bundle Analysis Report\n\n${report}`
+              });
+            }
+
+  lighthouse-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+
+      - name: Run Lighthouse CI
+        run: |
+          lhci autorun \
+            --collect.numberOfRuns=3 \
+            --collect.startServerCommand="npm start" \
+            --collect.url="http://localhost:3000" \
+            --upload.target=temporary-public-storage \
+            --assert.assertions.categories:performance=0.8 \
+            --assert.assertions.categories:accessibility=0.9 \
+            --assert.assertions.categories:best-practices=0.8 \
+            --assert.assertions.categories:seo=0.8
+        continue-on-error: true
+
+      - name: Upload Lighthouse reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/

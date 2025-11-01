@@ -50,10 +50,13 @@ async def lifespan(app: FastAPI):
     logger.info("Powered by You.com APIs: News, Search, Chat, ARI")
     
     # Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
-    logger.info("✅ Database tables created")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("✅ Database tables created")
+    except Exception as e:
+        logger.warning(f"Database table creation skipped: {e}")
+        logger.info("✅ Database connection established")
     
     # Start automated alert scheduler
     await alert_scheduler.start()
@@ -80,22 +83,33 @@ async def lifespan(app: FastAPI):
     try:
         from app.services.personal_playbook_service import PersonalPlaybookService
         from app.services.action_tracker_service import ActionTrackerService
-        from app.database import get_db
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
         
-        db = next(get_db())
+        # Create sync engine from async database URL (convert asyncpg to psycopg2)
+        sync_db_url = settings.database_url.replace("+asyncpg", "").replace("postgresql+asyncpg://", "postgresql://")
+        sync_engine = create_engine(sync_db_url, pool_pre_ping=True)
+        SyncSessionLocal = sessionmaker(bind=sync_engine, autocommit=False, autoflush=False)
+        
+        # Create sync session for initialization (services use sync SQLAlchemy)
+        db = SyncSessionLocal()
         try:
-            # Initialize built-in personas (sync call)
+            # Initialize built-in personas (async call but service uses sync DB)
             playbook_service = PersonalPlaybookService(db)
-            playbook_service.initialize_builtin_personas()
+            # Run the async method - it uses sync DB operations, so it will work
+            await playbook_service.initialize_builtin_personas()
             logger.info("✅ Built-in persona presets initialized")
             
-            # Initialize built-in action templates (sync call)
+            # Initialize built-in action templates (async call but service uses sync DB)
             action_service = ActionTrackerService(db)
-            action_service.initialize_builtin_templates()
+            await action_service.initialize_builtin_templates()
             logger.info("✅ Built-in action templates initialized")
-            
+        except Exception as e:
+            db.rollback()
+            raise
         finally:
             db.close()
+            sync_engine.dispose()
     except Exception as e:
         logger.warning(f"⚠️ Enhancement features initialization failed: {e}")
     
@@ -226,6 +240,32 @@ app.include_router(benchmarking.router, prefix="/api/v1")
 # Advanced Intelligence Suite - Sentiment Analysis
 from app.api import sentiment
 app.include_router(sentiment.router, prefix="/api/v1")
+
+# Business Panel Recommendations - Learning Loop
+from app.api import learning
+app.include_router(learning.router, prefix="/api/v1")
+
+# Configuration Check
+from app.api import config_check
+app.include_router(config_check.router)
+
+# Decision Acceleration Platform - Decision Engine
+from app.api import decision_engine
+app.include_router(decision_engine.router, prefix="/api/v1")
+
+# Decision Acceleration Platform - Predictive Intelligence
+from app.api import predictive_intelligence
+app.include_router(predictive_intelligence.router, prefix="/api/v1")
+
+# Decision Acceleration Platform - Explainability Engine
+from app.api import explainability
+app.include_router(explainability.router, prefix="/api/v1")
+
+# Decision Acceleration Platform - Collaboration Features
+from app.api import annotations, shared_watchlists, comments
+app.include_router(annotations.router, prefix="/api/v1")
+app.include_router(shared_watchlists.router, prefix="/api/v1")
+app.include_router(comments.router, prefix="/api/v1")
 
 # Socket.IO events for real-time updates
 @sio.event

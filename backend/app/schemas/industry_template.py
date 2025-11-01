@@ -89,7 +89,7 @@ class IndustryTemplateResponse(BaseModel):
     created_by: Optional[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class IndustryTemplateMetadata(BaseModel):
@@ -106,7 +106,7 @@ class IndustryTemplateMetadata(BaseModel):
     created_by: Optional[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TemplateApplicationCreate(BaseModel):
@@ -146,7 +146,7 @@ class TemplateApplicationResponse(BaseModel):
     industry_sector: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TemplateRating(BaseModel):

@@ -248,7 +248,37 @@ async def seed_demo_data():
                     ]
                 },
                 research_report={
-                    "report": f"Comprehensive research report for {competitor['name']}...",
+                    "report": f"""# Impact Analysis: {competitor['name']}
+
+## Competitive Threat Assessment
+
+**Risk Level**: {competitor['risk_level'].upper()} ({competitor['risk_score']}/100)
+
+### Key Developments
+{competitor['description']}
+
+### Strategic Implications
+
+#### Market Impact
+- **Competitive Pressure**: {competitor['risk_level'].title()} threat to market position
+- **Innovation Gap**: Potential disruption in core capabilities
+- **Customer Overlap**: Significant overlap in target segments
+
+#### Recommended Actions
+
+{'**IMMEDIATE ATTENTION REQUIRED**' if competitor['risk_score'] > 70 else '**MONITOR CLOSELY**' if competitor['risk_score'] > 40 else '**ROUTINE MONITORING**'}
+
+1. **Product Strategy**: {'Accelerate roadmap to maintain competitive edge' if competitor['risk_score'] > 70 else 'Evaluate feature parity gaps' if competitor['risk_score'] > 40 else 'Continue planned development'}
+2. **Market Response**: {'Consider strategic partnerships or acquisitions' if competitor['risk_score'] > 70 else 'Strengthen differentiation messaging' if competitor['risk_score'] > 40 else 'Maintain current positioning'}
+3. **Timeline**: {'Next 30 days' if competitor['risk_score'] > 70 else 'Next 90 days' if competitor['risk_score'] > 40 else 'Next 6 months'}
+
+### Intelligence Sources
+- Industry analyst reports
+- Company press releases and filings
+- Social media and news monitoring
+- Customer feedback and market research
+
+*Analysis powered by You.com ARI API with {competitor.get('total_sources', 150)} verified sources*""",
                     "sections": ["Overview", "Analysis", "Recommendations"]
                 },
                 total_sources=competitor["total_sources"],
@@ -270,7 +300,66 @@ async def seed_demo_data():
                     ]
                 },
                 research_report={
-                    "report": f"Deep research analysis of {research['company_name']}..."
+                    "report": f"""# Comprehensive Analysis: {research['company_name']}
+
+## Executive Summary
+
+{research['company_name']} demonstrates **strong competitive positioning** in the current market landscape. Our analysis of {research['total_sources']} sources reveals significant growth trajectory, innovative product development, and strategic market expansion opportunities.
+
+## Key Findings
+
+### Market Position
+- **Revenue Growth**: 150%+ YoY increase in competitive landscape
+- **Market Share**: Expanding presence in key segments
+- **Innovation Pipeline**: Breakthrough capabilities in core technology
+
+### Competitive Analysis
+
+> "The competitive landscape is rapidly evolving with new entrants disrupting traditional market dynamics."
+
+#### Strategic Advantages
+1. **Technology Leadership**: Advanced AI/ML capabilities
+2. **Market Timing**: First-mover advantage in emerging segments  
+3. **Customer Base**: Strong enterprise adoption metrics
+
+### Financial Metrics
+- **Valuation**: Current trajectory suggests $5B+ potential
+- **Funding**: Well-capitalized for expansion
+- **Unit Economics**: Strong margins and scalability
+
+## Strategic Recommendations
+
+### Immediate Actions (0-3 months)
+- **Monitor AI developments** - Track breakthrough capabilities and competitive releases
+- **Analyze funding trends** - Watch valuation multiples and mega-rounds
+- **Enterprise adoption** - Monitor Fortune 500 penetration rates
+
+### Medium-term Strategy (3-12 months)
+- **International expansion** - Assess global market opportunities
+- **Partnership development** - Strategic alliances and integrations
+- **Product roadmap** - Next-generation capability development
+
+## Risk Assessment
+
+### Opportunities
+- ✅ **Market expansion** into adjacent verticals
+- ✅ **Technology moats** through continued innovation
+- ✅ **Strategic partnerships** with industry leaders
+
+### Threats
+- ⚠️ **Competitive pressure** from well-funded rivals
+- ⚠️ **Market saturation** in core segments
+- ⚠️ **Regulatory changes** affecting operations
+
+## Sources & Methodology
+
+This analysis synthesizes information from **{research['total_sources']} verified sources** including:
+- Industry reports and market research
+- Financial filings and investor presentations  
+- News articles and press releases
+- Expert interviews and analyst reports
+
+*Report generated using You.com ARI API with comprehensive source verification*"""
                 },
                 total_sources=research["total_sources"],
                 api_usage=research["api_usage"]

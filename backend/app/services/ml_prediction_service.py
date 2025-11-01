@@ -1,671 +1,576 @@
-"""
-ML Prediction Service with Confidence Scoring
+"""Machine Learning-based prediction service for competitor behavior forecasting."""
 
-This service provides enhanced predictions with confidence scores for the ML Accuracy Engine.
-It includes fallback mechanisms, prediction caching, and optimization for real-time inference.
-"""
-
-import asyncio
-import json
 import logging
-import os
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass
-from enum import Enum
-
 import numpy as np
 import pandas as pd
+from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional, Tuple
+from sqlalchemy.orm import Session
+from sqlalchemy import and_, desc
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingClassifier
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, mean_absolute_error
 import joblib
-from sklearn.base import BaseEstimator
-from sklearn.preprocessing import StandardScaler
+import os
 
-import redis.asyncio as redis
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
-
-from app.models.ml_training import TrainingJob, ModelPerformanceMetric
+from app.models.predictive_intelligence import CompetitorPattern, PredictedEvent, PatternEvent
 from app.models.impact_card import ImpactCard
-from app.services.feature_extractor import FeatureExtractor, FeatureSet
-from app.services.ml_training_service import ModelType
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-class PredictionType(str, Enum):
-    """Types of predictions the service can make."""
-    IMPACT_CLASSIFICATION = "impact_classification"
-    RISK_SCORING = "risk_scoring"
-    CONFIDENCE_PREDICTION = "confidence_prediction"
-    RELEVANCE_CLASSIFICATION = "relevance_classification"
-
-@dataclass
-class PredictionRequest:
-    """Request for ML prediction."""
-    entity_id: str
-    entity_type: str
-    prediction_type: PredictionType
-    features: Optional[Dict[str, Any]] = None
-    use_cache: bool = True
-
-@dataclass
-class PredictionResult:
-    """Result of ML prediction with confidence scoring."""
-    prediction_type: PredictionType
-    predicted_value: Any
-    confidence_score: float
-    model_version: str
-    fallback_used: bool
-    processing_time_ms: float
-    metadata: Dict[str, Any]
-
-@dataclass
-class ModelInfo:
-    """Information about a loaded model."""
-    model: BaseEstimator
-    scaler: StandardScaler
-    version: str
-    model_type: ModelType
-    performance_metrics: Dict[str, float]
-    loaded_at: datetime
 
 class MLPredictionService:
-    """Service for ML predictions with confidence scoring and caching."""
+    """Machine Learning service for advanced competitor behavior prediction."""
     
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: Session):
         self.db = db
-        self.feature_extractor = FeatureExtractor(db)
-        self.model_storage_path = os.path.join(settings.data_dir, "ml_models")
-        self.scalers_storage_path = os.path.join(settings.data_dir, "ml_scalers")
+        self.models_dir = "data/ml_models"
+        self.scalers_dir = "data/ml_scalers"
         
-        # Model cache
-        self.loaded_models: Dict[ModelType, ModelInfo] = {}
-        self.model_cache_ttl = timedelta(hours=6)
+        # Ensure directories exist
+        os.makedirs(self.models_dir, exist_ok=True)
+        os.makedirs(self.scalers_dir, exist_ok=True)
         
-        # Redis for prediction caching
-        self.redis_client: Optional[redis.Redis] = None
-        self.prediction_cache_ttl = timedelta(hours=1)
-        self.redis_prefix = "ml_predictions:"
+        # Model configurations
+        self.timeline_model = None
+        self.probability_model = None
+        self.confidence_model = None
+        self.feature_scaler = None
+        self.label_encoder = None
         
-        # Fallback rules
-        self.fallback_rules = {
-            PredictionType.IMPACT_CLASSIFICATION: self._fallback_impact_classification,
-            PredictionType.RISK_SCORING: self._fallback_risk_scoring,
-            PredictionType.CONFIDENCE_PREDICTION: self._fallback_confidence_prediction,
-            PredictionType.RELEVANCE_CLASSIFICATION: self._fallback_relevance_classification
-        }
+        # Model parameters
+        self.min_training_samples = 20
+        self.feature_window_days = 30
+        self.prediction_confidence_threshold = 0.6
     
-    async def _get_redis_client(self) -> Optional[redis.Redis]:
-        """Get or create Redis client."""
-        if self.redis_client is None:
-            try:
-                self.redis_client = redis.from_url(
-                    settings.redis_url,
-                    encoding="utf-8",
-                    decode_responses=True
-                )
-                await self.redis_client.ping()
-            except Exception as e:
-                logger.warning(f"Redis connection failed: {e}. Prediction caching disabled.")
-                self.redis_client = None
+    def train_prediction_models(self) -> Dict[str, Any]:
+        """Train ML models for prediction enhancement."""
+        logger.info("Training ML prediction models...")
         
-        return self.redis_client
-    
-    async def predict(self, request: PredictionRequest) -> PredictionResult:
-        """Make a prediction with confidence scoring."""
-        start_time = datetime.now(timezone.utc)
+        # Prepare training data
+        training_data = self._prepare_training_data()
         
-        try:
-            # Check cache first
-            if request.use_cache:
-                cached_result = await self._get_cached_prediction(request)
-                if cached_result:
-                    return cached_result
-            
-            # Get model type for prediction type
-            model_type = self._get_model_type_for_prediction(request.prediction_type)
-            
-            # Load model if needed
-            model_info = await self._load_model(model_type)
-            
-            if not model_info:
-                # Use fallback
-                return await self._fallback_prediction(request, start_time)
-            
-            # Extract features if not provided
-            if not request.features:
-                features = await self._extract_features_for_prediction(request)
-                if not features:
-                    return await self._fallback_prediction(request, start_time)
-            else:
-                features = request.features
-            
-            # Prepare feature vector
-            feature_vector = self._prepare_feature_vector(features, model_info)
-            
-            # Make prediction
-            prediction = model_info.model.predict([feature_vector])[0]
-            
-            # Calculate confidence score
-            confidence_score = self._calculate_confidence_score(
-                model_info, feature_vector, prediction, request.prediction_type
-            )
-            
-            # Create result
-            processing_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
-            
-            result = PredictionResult(
-                prediction_type=request.prediction_type,
-                predicted_value=prediction,
-                confidence_score=confidence_score,
-                model_version=model_info.version,
-                fallback_used=False,
-                processing_time_ms=processing_time,
-                metadata={
-                    "model_type": model_info.model_type.value,
-                    "feature_count": len(feature_vector),
-                    "model_performance": model_info.performance_metrics
-                }
-            )
-            
-            # Cache result
-            if request.use_cache:
-                await self._cache_prediction(request, result)
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Prediction failed: {e}")
-            return await self._fallback_prediction(request, start_time, error=str(e))
-    
-    def _get_model_type_for_prediction(self, prediction_type: PredictionType) -> ModelType:
-        """Map prediction type to model type."""
-        mapping = {
-            PredictionType.IMPACT_CLASSIFICATION: ModelType.IMPACT_CLASSIFIER,
-            PredictionType.RISK_SCORING: ModelType.RISK_SCORER,
-            PredictionType.CONFIDENCE_PREDICTION: ModelType.CONFIDENCE_PREDICTOR,
-            PredictionType.RELEVANCE_CLASSIFICATION: ModelType.RELEVANCE_CLASSIFIER
-        }
-        return mapping[prediction_type]
-    
-    async def _load_model(self, model_type: ModelType) -> Optional[ModelInfo]:
-        """Load model and scaler from storage."""
-        # Check if model is already loaded and not expired
-        if model_type in self.loaded_models:
-            model_info = self.loaded_models[model_type]
-            if datetime.now(timezone.utc) - model_info.loaded_at < self.model_cache_ttl:
-                return model_info
-            else:
-                # Remove expired model
-                del self.loaded_models[model_type]
+        if len(training_data) < self.min_training_samples:
+            logger.warning(f"Insufficient training data: {len(training_data)} samples")
+            return {"status": "insufficient_data", "samples": len(training_data)}
         
-        try:
-            # Get latest model version
-            result = await self.db.execute(
-                select(TrainingJob)
-                .where(TrainingJob.model_type == model_type.value)
-                .where(TrainingJob.status == "completed")
-                .order_by(desc(TrainingJob.completed_at))
-                .limit(1)
-            )
-            
-            latest_job = result.scalar_one_or_none()
-            if not latest_job:
-                logger.warning(f"No trained model found for {model_type.value}")
-                return None
-            
-            model_version = latest_job.new_model_version
-            
-            # Load model and scaler
-            model_path = os.path.join(self.model_storage_path, f"{model_version}.joblib")
-            scaler_path = os.path.join(self.scalers_storage_path, f"{model_version}_scaler.joblib")
-            
-            if not os.path.exists(model_path) or not os.path.exists(scaler_path):
-                logger.error(f"Model files not found for {model_version}")
-                return None
-            
-            model = joblib.load(model_path)
-            scaler = joblib.load(scaler_path)
-            
-            # Get performance metrics
-            metrics_result = await self.db.execute(
-                select(ModelPerformanceMetric)
-                .where(ModelPerformanceMetric.model_version == model_version)
-            )
-            
-            metrics_records = metrics_result.scalars().all()
-            performance_metrics = {
-                record.metric_name: record.metric_value 
-                for record in metrics_records
-            }
-            
-            # Create model info
-            model_info = ModelInfo(
-                model=model,
-                scaler=scaler,
-                version=model_version,
-                model_type=model_type,
-                performance_metrics=performance_metrics,
-                loaded_at=datetime.now(timezone.utc)
-            )
-            
-            # Cache loaded model
-            self.loaded_models[model_type] = model_info
-            
-            logger.info(f"Loaded model {model_version} for {model_type.value}")
-            return model_info
-            
-        except Exception as e:
-            logger.error(f"Failed to load model for {model_type.value}: {e}")
-            return None
-    
-    async def _extract_features_for_prediction(self, request: PredictionRequest) -> Optional[Dict[str, Any]]:
-        """Extract features for prediction."""
-        try:
-            if request.entity_type == "impact_card":
-                # Get impact card
-                result = await self.db.execute(
-                    select(ImpactCard).where(ImpactCard.id == int(request.entity_id))
-                )
-                impact_card = result.scalar_one_or_none()
-                
-                if not impact_card:
-                    return None
-                
-                # Extract features
-                feature_set = await self.feature_extractor.extract_impact_card_features(impact_card)
-                
-                # Convert to dictionary
-                features = {}
-                for feature in feature_set.features:
-                    if feature.feature_type.value in ["numerical", "categorical"]:
-                        features[feature.name] = feature.value
-                
-                return features
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Failed to extract features for prediction: {e}")
-            return None
-    
-    def _prepare_feature_vector(self, features: Dict[str, Any], model_info: ModelInfo) -> np.ndarray:
-        """Prepare feature vector for model input."""
-        # Create DataFrame with features
-        df = pd.DataFrame([features])
+        # Split features and targets
+        features_df = pd.DataFrame(training_data)
         
-        # Handle missing features (fill with 0)
-        expected_features = model_info.scaler.feature_names_in_ if hasattr(model_info.scaler, 'feature_names_in_') else None
+        # Prepare features
+        feature_columns = [
+            'days_since_last', 'pattern_frequency', 'pattern_confidence',
+            'avg_risk_score', 'risk_trend', 'time_consistency',
+            'impact_diversity', 'seasonal_factor'
+        ]
         
-        if expected_features is not None:
-            for feature in expected_features:
-                if feature not in df.columns:
-                    df[feature] = 0.0
-            
-            # Reorder columns to match training
-            df = df[expected_features]
+        X = features_df[feature_columns].fillna(0)
         
-        # Fill missing values
-        df = df.fillna(0)
+        # Prepare targets
+        y_timeline = features_df['actual_timeline'].fillna(30)  # Default to 30 days
+        y_probability = features_df['success_probability'].fillna(0.5)
+        y_confidence = features_df['prediction_confidence'].fillna(0.5)
         
         # Scale features
-        feature_vector = model_info.scaler.transform(df)[0]
+        self.feature_scaler = StandardScaler()
+        X_scaled = self.feature_scaler.fit_transform(X)
         
-        return feature_vector
-    
-    def _calculate_confidence_score(
-        self, 
-        model_info: ModelInfo, 
-        feature_vector: np.ndarray, 
-        prediction: Any,
-        prediction_type: PredictionType
-    ) -> float:
-        """Calculate confidence score for the prediction."""
-        try:
-            base_confidence = 0.5
-            
-            # Use model's predict_proba if available (for classifiers)
-            if hasattr(model_info.model, 'predict_proba'):
-                probabilities = model_info.model.predict_proba([feature_vector])[0]
-                # Use max probability as confidence
-                base_confidence = float(np.max(probabilities))
-            
-            # Adjust confidence based on model performance
-            f1_score = model_info.performance_metrics.get("f1_score", 0.5)
-            performance_adjustment = f1_score * 0.3  # Up to 30% boost from performance
-            
-            # Adjust confidence based on prediction type
-            type_adjustment = self._get_type_confidence_adjustment(prediction_type, prediction)
-            
-            # Combine adjustments
-            final_confidence = base_confidence + performance_adjustment + type_adjustment
-            
-            # Clamp to [0.0, 1.0]
-            return max(0.0, min(1.0, final_confidence))
-            
-        except Exception as e:
-            logger.warning(f"Failed to calculate confidence score: {e}")
-            return 0.5  # Default confidence
-    
-    def _get_type_confidence_adjustment(self, prediction_type: PredictionType, prediction: Any) -> float:
-        """Get confidence adjustment based on prediction type and value."""
-        if prediction_type == PredictionType.RISK_SCORING:
-            # Higher confidence for extreme risk scores
-            if isinstance(prediction, (int, float)):
-                if prediction > 80 or prediction < 20:
-                    return 0.1  # 10% boost for extreme values
-        
-        elif prediction_type == PredictionType.CONFIDENCE_PREDICTION:
-            # Confidence predictions are inherently less certain
-            return -0.1  # 10% penalty
-        
-        return 0.0
-    
-    async def _fallback_prediction(
-        self, 
-        request: PredictionRequest, 
-        start_time: datetime,
-        error: Optional[str] = None
-    ) -> PredictionResult:
-        """Generate fallback prediction when ML model fails."""
-        fallback_func = self.fallback_rules.get(request.prediction_type)
-        
-        if fallback_func:
-            prediction, confidence = await fallback_func(request)
-        else:
-            prediction, confidence = 0.5, 0.3  # Default fallback
-        
-        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
-        
-        return PredictionResult(
-            prediction_type=request.prediction_type,
-            predicted_value=prediction,
-            confidence_score=confidence,
-            model_version="fallback",
-            fallback_used=True,
-            processing_time_ms=processing_time,
-            metadata={
-                "fallback_reason": error or "Model not available",
-                "fallback_method": "rule_based"
-            }
+        # Train timeline prediction model (regression)
+        self.timeline_model = RandomForestRegressor(
+            n_estimators=100,
+            max_depth=10,
+            random_state=42
         )
-    
-    async def _fallback_impact_classification(self, request: PredictionRequest) -> Tuple[float, float]:
-        """Fallback for impact classification."""
-        try:
-            if request.entity_type == "impact_card":
-                # Get impact card
-                result = await self.db.execute(
-                    select(ImpactCard).where(ImpactCard.id == int(request.entity_id))
-                )
-                impact_card = result.scalar_one_or_none()
-                
-                if impact_card:
-                    # Rule-based classification based on risk score and sources
-                    risk_score = impact_card.risk_score or 0
-                    total_sources = impact_card.total_sources or 0
-                    credibility = impact_card.credibility_score or 0.5
-                    
-                    # Simple rule: high impact if risk > 70, sources > 2, credibility > 0.6
-                    if risk_score > 70 and total_sources > 2 and credibility > 0.6:
-                        return 1.0, 0.6  # High impact, moderate confidence
-                    elif risk_score > 40 and total_sources > 1:
-                        return 0.7, 0.5  # Medium impact, lower confidence
-                    else:
-                        return 0.3, 0.4  # Low impact, low confidence
-            
-            return 0.5, 0.3  # Default
-            
-        except Exception:
-            return 0.5, 0.3
-    
-    async def _fallback_risk_scoring(self, request: PredictionRequest) -> Tuple[float, float]:
-        """Fallback for risk scoring."""
-        try:
-            if request.entity_type == "impact_card":
-                # Get impact card
-                result = await self.db.execute(
-                    select(ImpactCard).where(ImpactCard.id == int(request.entity_id))
-                )
-                impact_card = result.scalar_one_or_none()
-                
-                if impact_card:
-                    # Use existing risk score with slight adjustment
-                    base_risk = impact_card.risk_score or 50
-                    
-                    # Adjust based on sources and credibility
-                    sources_adjustment = min(10, (impact_card.total_sources or 0) * 2)
-                    credibility_adjustment = (impact_card.credibility_score or 0.5) * 10
-                    
-                    adjusted_risk = base_risk + sources_adjustment + credibility_adjustment
-                    return min(100, max(0, adjusted_risk)), 0.5
-            
-            return 50.0, 0.3  # Default medium risk
-            
-        except Exception:
-            return 50.0, 0.3
-    
-    async def _fallback_confidence_prediction(self, request: PredictionRequest) -> Tuple[float, float]:
-        """Fallback for confidence prediction."""
-        try:
-            if request.entity_type == "impact_card":
-                # Get impact card
-                result = await self.db.execute(
-                    select(ImpactCard).where(ImpactCard.id == int(request.entity_id))
-                )
-                impact_card = result.scalar_one_or_none()
-                
-                if impact_card:
-                    # Base confidence on existing confidence score and credibility
-                    base_confidence = (impact_card.confidence_score or 50) / 100
-                    credibility_boost = (impact_card.credibility_score or 0.5) * 0.2
-                    
-                    final_confidence = min(1.0, base_confidence + credibility_boost)
-                    return final_confidence, 0.4
-            
-            return 0.5, 0.3  # Default
-            
-        except Exception:
-            return 0.5, 0.3
-    
-    async def _fallback_relevance_classification(self, request: PredictionRequest) -> Tuple[float, float]:
-        """Fallback for relevance classification."""
-        try:
-            if request.entity_type == "impact_card":
-                # Get impact card
-                result = await self.db.execute(
-                    select(ImpactCard).where(ImpactCard.id == int(request.entity_id))
-                )
-                impact_card = result.scalar_one_or_none()
-                
-                if impact_card:
-                    # Rule-based relevance based on risk and recency
-                    risk_score = impact_card.risk_score or 0
-                    
-                    # Check recency (more recent = more relevant)
-                    if impact_card.created_at:
-                        hours_old = (datetime.now(timezone.utc) - impact_card.created_at).total_seconds() / 3600
-                        recency_factor = max(0, 1 - (hours_old / 168))  # Decay over a week
-                    else:
-                        recency_factor = 0.5
-                    
-                    # Combine risk and recency
-                    relevance_score = (risk_score / 100) * 0.7 + recency_factor * 0.3
-                    
-                    return min(1.0, relevance_score), 0.5
-            
-            return 0.5, 0.3  # Default
-            
-        except Exception:
-            return 0.5, 0.3
-    
-    async def _get_cached_prediction(self, request: PredictionRequest) -> Optional[PredictionResult]:
-        """Get cached prediction if available."""
-        redis_client = await self._get_redis_client()
-        if not redis_client:
-            return None
+        self.timeline_model.fit(X_scaled, y_timeline)
         
-        try:
-            cache_key = f"{self.redis_prefix}{request.prediction_type.value}:{request.entity_type}:{request.entity_id}"
-            cached_data = await redis_client.get(cache_key)
-            
-            if not cached_data:
-                return None
-            
-            data = json.loads(cached_data)
-            
-            return PredictionResult(
-                prediction_type=PredictionType(data["prediction_type"]),
-                predicted_value=data["predicted_value"],
-                confidence_score=data["confidence_score"],
-                model_version=data["model_version"],
-                fallback_used=data["fallback_used"],
-                processing_time_ms=data["processing_time_ms"],
-                metadata=data["metadata"]
-            )
-            
-        except Exception as e:
-            logger.warning(f"Failed to get cached prediction: {e}")
-            return None
-    
-    async def _cache_prediction(self, request: PredictionRequest, result: PredictionResult) -> None:
-        """Cache prediction result."""
-        redis_client = await self._get_redis_client()
-        if not redis_client:
-            return
+        # Train probability prediction model (classification)
+        y_prob_binary = (y_probability > 0.5).astype(int)
+        self.probability_model = GradientBoostingClassifier(
+            n_estimators=100,
+            max_depth=6,
+            random_state=42
+        )
+        self.probability_model.fit(X_scaled, y_prob_binary)
         
-        try:
-            cache_key = f"{self.redis_prefix}{request.prediction_type.value}:{request.entity_type}:{request.entity_id}"
-            
-            cache_data = {
-                "prediction_type": result.prediction_type.value,
-                "predicted_value": result.predicted_value,
-                "confidence_score": result.confidence_score,
-                "model_version": result.model_version,
-                "fallback_used": result.fallback_used,
-                "processing_time_ms": result.processing_time_ms,
-                "metadata": result.metadata,
-                "cached_at": datetime.now(timezone.utc).isoformat()
-            }
-            
-            await redis_client.setex(
-                cache_key,
-                int(self.prediction_cache_ttl.total_seconds()),
-                json.dumps(cache_data, default=str)
-            )
-            
-        except Exception as e:
-            logger.warning(f"Failed to cache prediction: {e}")
-    
-    async def predict_batch(self, requests: List[PredictionRequest]) -> List[PredictionResult]:
-        """Make batch predictions for multiple requests."""
-        results = []
+        # Train confidence prediction model (regression)
+        self.confidence_model = RandomForestRegressor(
+            n_estimators=100,
+            max_depth=8,
+            random_state=42
+        )
+        self.confidence_model.fit(X_scaled, y_confidence)
         
-        # Group requests by prediction type for efficiency
-        grouped_requests = {}
-        for i, request in enumerate(requests):
-            if request.prediction_type not in grouped_requests:
-                grouped_requests[request.prediction_type] = []
-            grouped_requests[request.prediction_type].append((i, request))
+        # Save models
+        self._save_models()
         
-        # Process each group
-        for prediction_type, type_requests in grouped_requests.items():
-            model_type = self._get_model_type_for_prediction(prediction_type)
-            model_info = await self._load_model(model_type)
-            
-            for original_index, request in type_requests:
-                result = await self.predict(request)
-                results.append((original_index, result))
+        # Calculate training metrics
+        timeline_mae = mean_absolute_error(y_timeline, self.timeline_model.predict(X_scaled))
+        prob_accuracy = accuracy_score(y_prob_binary, self.probability_model.predict(X_scaled))
+        conf_mae = mean_absolute_error(y_confidence, self.confidence_model.predict(X_scaled))
         
-        # Sort results back to original order
-        results.sort(key=lambda x: x[0])
-        return [result for _, result in results]
-    
-    async def invalidate_prediction_cache(
-        self, 
-        entity_id: str, 
-        entity_type: str,
-        prediction_type: Optional[PredictionType] = None
-    ) -> int:
-        """Invalidate cached predictions for an entity."""
-        redis_client = await self._get_redis_client()
-        if not redis_client:
-            return 0
-        
-        try:
-            if prediction_type:
-                # Invalidate specific prediction type
-                cache_key = f"{self.redis_prefix}{prediction_type.value}:{entity_type}:{entity_id}"
-                deleted = await redis_client.delete(cache_key)
-                return deleted
-            else:
-                # Invalidate all prediction types for entity using SCAN
-                pattern = f"{self.redis_prefix}*:{entity_type}:{entity_id}"
-                keys = []
-                cursor = 0
-                while True:
-                    cursor, batch_keys = await redis_client.scan(cursor=cursor, match=pattern, count=100)
-                    keys.extend(batch_keys)
-                    if cursor == 0:
-                        break
-                
-                if keys:
-                    # Delete in batches to avoid large operations
-                    deleted = 0
-                    batch_size = 100
-                    for i in range(0, len(keys), batch_size):
-                        batch = keys[i:i + batch_size]
-                        deleted += await redis_client.delete(*batch)
-                    return deleted
-                return 0
-                
-        except Exception as e:
-            logger.warning(f"Failed to invalidate prediction cache: {e}")
-            return 0
-    
-    async def get_prediction_statistics(self, days: int = 7) -> Dict[str, Any]:
-        """Get prediction service statistics."""
-        redis_client = await self._get_redis_client()
-        
-        stats = {
-            "loaded_models": len(self.loaded_models),
-            "model_info": {},
-            "cache_enabled": redis_client is not None,
-            "cache_stats": {}
+        metrics = {
+            "status": "success",
+            "training_samples": len(training_data),
+            "timeline_mae": timeline_mae,
+            "probability_accuracy": prob_accuracy,
+            "confidence_mae": conf_mae,
+            "feature_importance": self._get_feature_importance()
         }
         
-        # Model information
-        for model_type, model_info in self.loaded_models.items():
-            stats["model_info"][model_type.value] = {
-                "version": model_info.version,
-                "loaded_at": model_info.loaded_at.isoformat(),
-                "performance_metrics": model_info.performance_metrics
+        logger.info(f"Model training completed: {metrics}")
+        return metrics
+    
+    def _prepare_training_data(self) -> List[Dict[str, Any]]:
+        """Prepare training data from historical patterns and outcomes."""
+        training_data = []
+        
+        # Get all validated predictions for training
+        validated_predictions = self.db.query(PredictedEvent).filter(
+            PredictedEvent.status.in_(["validated", "invalidated"]),
+            PredictedEvent.accuracy_score.isnot(None)
+        ).all()
+        
+        for prediction in validated_predictions:
+            # Get the pattern associated with this prediction
+            pattern = self.db.query(CompetitorPattern).filter(
+                CompetitorPattern.id == prediction.pattern_id
+            ).first()
+            
+            if not pattern:
+                continue
+            
+            # Calculate features
+            features = self._extract_prediction_features(pattern, prediction)
+            
+            # Calculate actual outcomes
+            actual_timeline = None
+            if prediction.validation_date and prediction.predicted_date:
+                actual_timeline = (prediction.validation_date - prediction.predicted_date).days
+            
+            success_probability = prediction.accuracy_score
+            prediction_confidence = prediction.confidence
+            
+            training_sample = {
+                **features,
+                'actual_timeline': actual_timeline,
+                'success_probability': success_probability,
+                'prediction_confidence': prediction_confidence
             }
+            
+            training_data.append(training_sample)
         
-        # Cache statistics
-        if redis_client:
-            try:
-                pattern = f"{self.redis_prefix}*"
-                keys = []
-                cursor = 0
-                while True:
-                    cursor, batch_keys = await redis_client.scan(cursor=cursor, match=pattern, count=100)
-                    keys.extend(batch_keys)
-                    if cursor == 0:
-                        break
-                
-                stats["cache_stats"]["total_cached_predictions"] = len(keys)
-                
-                # Sample some keys to get cache hit info
-                if keys:
-                    sample_keys = keys[:min(10, len(keys))]
-                    cache_info = []
-                    for key in sample_keys:
-                        ttl = await redis_client.ttl(key)
-                        cache_info.append({"key": key, "ttl_seconds": ttl})
-                    stats["cache_stats"]["sample_cache_info"] = cache_info
-                
-            except Exception as e:
-                logger.warning(f"Failed to get cache statistics: {e}")
+        return training_data
+    
+    def _extract_prediction_features(self, pattern: CompetitorPattern, prediction: PredictedEvent) -> Dict[str, float]:
+        """Extract features for ML model training and prediction."""
+        features = {}
         
-        return stats
+        # Time-based features
+        if pattern.last_observed:
+            days_since_last = (prediction.created_at - pattern.last_observed).days
+            features['days_since_last'] = days_since_last
+        else:
+            features['days_since_last'] = 0
+        
+        # Pattern characteristics
+        features['pattern_frequency'] = pattern.frequency or 0
+        features['pattern_confidence'] = pattern.confidence or 0
+        features['avg_risk_score'] = self._calculate_avg_risk_score(pattern)
+        features['risk_trend'] = self._calculate_risk_trend(pattern)
+        features['time_consistency'] = self._calculate_time_consistency(pattern)
+        features['impact_diversity'] = self._calculate_impact_diversity(pattern)
+        
+        # Seasonal factors
+        features['seasonal_factor'] = self._calculate_seasonal_factor(prediction.created_at)
+        
+        return features
+    
+    def _calculate_avg_risk_score(self, pattern: CompetitorPattern) -> float:
+        """Calculate average risk score from pattern sequence."""
+        if not pattern.sequence:
+            return 0.0
+        
+        risk_scores = [event.get('risk_score', 0) for event in pattern.sequence if event.get('risk_score')]
+        return np.mean(risk_scores) if risk_scores else 0.0
+    
+    def _calculate_risk_trend(self, pattern: CompetitorPattern) -> float:
+        """Calculate risk score trend from pattern sequence."""
+        if not pattern.sequence or len(pattern.sequence) < 2:
+            return 0.0
+        
+        risk_scores = [event.get('risk_score', 0) for event in pattern.sequence if event.get('risk_score')]
+        if len(risk_scores) < 2:
+            return 0.0
+        
+        # Calculate linear trend
+        x = np.arange(len(risk_scores))
+        trend = np.polyfit(x, risk_scores, 1)[0]
+        return trend
+    
+    def _calculate_time_consistency(self, pattern: CompetitorPattern) -> float:
+        """Calculate consistency of timing intervals in pattern."""
+        if not pattern.typical_intervals or len(pattern.typical_intervals) < 2:
+            return 0.0
+        
+        intervals = pattern.typical_intervals
+        mean_interval = np.mean(intervals)
+        std_interval = np.std(intervals)
+        
+        # Consistency is inverse of coefficient of variation
+        if mean_interval > 0:
+            cv = std_interval / mean_interval
+            consistency = max(0.0, 1.0 - cv)
+        else:
+            consistency = 0.0
+        
+        return consistency
+    
+    def _calculate_impact_diversity(self, pattern: CompetitorPattern) -> float:
+        """Calculate diversity of impact areas in pattern."""
+        if not pattern.sequence:
+            return 0.0
+        
+        all_impacts = []
+        for event in pattern.sequence:
+            if event.get('impact_areas'):
+                all_impacts.extend(event['impact_areas'])
+        
+        if not all_impacts:
+            return 0.0
+        
+        # Calculate diversity as ratio of unique impacts to total impacts
+        unique_impacts = len(set(all_impacts))
+        total_impacts = len(all_impacts)
+        
+        return unique_impacts / total_impacts if total_impacts > 0 else 0.0
+    
+    def _calculate_seasonal_factor(self, date: datetime) -> float:
+        """Calculate seasonal factor based on date."""
+        # Simple seasonal factor based on month
+        month = date.month
+        
+        # Business activity patterns (higher in Q1, Q4)
+        seasonal_weights = {
+            1: 0.9, 2: 0.8, 3: 0.9,  # Q1
+            4: 0.7, 5: 0.7, 6: 0.6,  # Q2
+            7: 0.5, 8: 0.5, 9: 0.7,  # Q3
+            10: 0.8, 11: 0.9, 12: 0.9  # Q4
+        }
+        
+        return seasonal_weights.get(month, 0.7)
+    
+    def enhance_prediction(self, pattern: CompetitorPattern, base_prediction: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhance a base prediction using ML models."""
+        if not self._models_loaded():
+            logger.warning("ML models not loaded, using base prediction")
+            return base_prediction
+        
+        try:
+            # Extract features for this pattern
+            features = self._extract_prediction_features(pattern, type('obj', (object,), {
+                'created_at': datetime.utcnow(),
+                'pattern_id': pattern.id
+            })())
+            
+            # Prepare feature vector
+            feature_vector = np.array([[
+                features['days_since_last'],
+                features['pattern_frequency'],
+                features['pattern_confidence'],
+                features['avg_risk_score'],
+                features['risk_trend'],
+                features['time_consistency'],
+                features['impact_diversity'],
+                features['seasonal_factor']
+            ]])
+            
+            # Scale features
+            feature_vector_scaled = self.feature_scaler.transform(feature_vector)
+            
+            # Make predictions
+            predicted_timeline = self.timeline_model.predict(feature_vector_scaled)[0]
+            predicted_probability = self.probability_model.predict_proba(feature_vector_scaled)[0][1]
+            predicted_confidence = self.confidence_model.predict(feature_vector_scaled)[0]
+            
+            # Enhance the base prediction
+            enhanced_prediction = base_prediction.copy()
+            
+            # Update timeline
+            enhanced_prediction['predicted_timeline_days'] = max(1, int(predicted_timeline))
+            enhanced_prediction['predicted_date'] = datetime.utcnow() + timedelta(days=int(predicted_timeline))
+            
+            # Update probability and confidence
+            enhanced_prediction['ml_probability'] = min(1.0, max(0.0, predicted_probability))
+            enhanced_prediction['ml_confidence'] = min(1.0, max(0.0, predicted_confidence))
+            
+            # Combine with base prediction using weighted average
+            base_weight = 0.4
+            ml_weight = 0.6
+            
+            if 'probability' in base_prediction:
+                enhanced_prediction['probability'] = (
+                    base_weight * base_prediction['probability'] + 
+                    ml_weight * enhanced_prediction['ml_probability']
+                )
+            
+            if 'confidence' in base_prediction:
+                enhanced_prediction['confidence'] = (
+                    base_weight * base_prediction['confidence'] + 
+                    ml_weight * enhanced_prediction['ml_confidence']
+                )
+            
+            # Add ML-specific reasoning
+            enhanced_prediction['ml_reasoning'] = [
+                f"ML model predicts timeline of {int(predicted_timeline)} days",
+                f"ML probability score: {predicted_probability:.2f}",
+                f"ML confidence score: {predicted_confidence:.2f}",
+                f"Key factors: pattern consistency, risk trend, seasonal timing"
+            ]
+            
+            logger.info(f"Enhanced prediction with ML: timeline={predicted_timeline:.1f}d, prob={predicted_probability:.2f}")
+            return enhanced_prediction
+            
+        except Exception as e:
+            logger.error(f"Error enhancing prediction with ML: {e}")
+            return base_prediction
+    
+    def calculate_confidence_intervals(self, prediction: Dict[str, Any], pattern: CompetitorPattern) -> Dict[str, Any]:
+        """Calculate confidence intervals for predictions."""
+        if not self._models_loaded():
+            return prediction
+        
+        try:
+            # Extract features
+            features = self._extract_prediction_features(pattern, type('obj', (object,), {
+                'created_at': datetime.utcnow(),
+                'pattern_id': pattern.id
+            })())
+            
+            feature_vector = np.array([[
+                features['days_since_last'],
+                features['pattern_frequency'],
+                features['pattern_confidence'],
+                features['avg_risk_score'],
+                features['risk_trend'],
+                features['time_consistency'],
+                features['impact_diversity'],
+                features['seasonal_factor']
+            ]])
+            
+            feature_vector_scaled = self.feature_scaler.transform(feature_vector)
+            
+            # Calculate prediction intervals using bootstrap of residuals approach
+            timeline_predictions = []
+            
+            # Get recent data for residual calculation
+            recent_data = self._get_recent_training_data()
+            if len(recent_data) >= 10:
+                X_recent = pd.DataFrame(recent_data)[
+                    ['days_since_last', 'pattern_frequency', 'pattern_confidence',
+                     'avg_risk_score', 'risk_trend', 'time_consistency',
+                     'impact_diversity', 'seasonal_factor']
+                ].fillna(0)
+                y_recent = pd.DataFrame(recent_data)['actual_timeline'].fillna(30)
+                
+                X_recent_scaled = self.feature_scaler.transform(X_recent)
+                
+                # Get predictions from already-trained model
+                recent_preds = self.timeline_model.predict(X_recent_scaled)
+                residuals = np.array(y_recent - recent_preds)
+                
+                # Get base prediction for current feature vector (computed once)
+                base_pred = self.timeline_model.predict(feature_vector_scaled)[0]
+                
+                # Validate residuals before bootstrapping
+                if (len(residuals) > 0 and 
+                    not np.any(np.isnan(residuals)) and 
+                    np.std(residuals) > 1e-6):
+                    
+                    # Bootstrap residuals to create prediction intervals
+                    n_bootstrap = 1000  # Statistically reasonable sample count
+                    for _ in range(n_bootstrap):
+                        sampled_residual = np.random.choice(residuals)
+                        timeline_predictions.append(base_pred + sampled_residual)
+                else:
+                    # Fall back to minimal variance sampling if residuals are invalid
+                    logger.warning("Invalid residuals detected, falling back to minimal variance sampling")
+                    for i in range(5):
+                        timeline_predictions.append(base_pred + np.random.normal(0, base_pred * 0.1))
+            else:
+                # Fallback: use base prediction with minimal variance
+                base_pred = self.timeline_model.predict(feature_vector_scaled)[0]
+                for i in range(5):
+                    timeline_predictions.append(base_pred + np.random.normal(0, base_pred * 0.1))
+            
+            if timeline_predictions:
+                # Calculate confidence intervals
+                timeline_mean = np.mean(timeline_predictions)
+                timeline_std = np.std(timeline_predictions)
+                
+                # 95% confidence interval
+                lower_bound = max(1, timeline_mean - 1.96 * timeline_std)
+                upper_bound = timeline_mean + 1.96 * timeline_std
+                
+                prediction['confidence_intervals'] = {
+                    'timeline_days': {
+                        'mean': timeline_mean,
+                        'lower_95': lower_bound,
+                        'upper_95': upper_bound,
+                        'std': timeline_std
+                    }
+                }
+                
+                # Update timeframe based on confidence intervals
+                if upper_bound <= 7:
+                    prediction['timeframe'] = "within 1 week"
+                elif upper_bound <= 30:
+                    prediction['timeframe'] = "within 1 month"
+                elif upper_bound <= 90:
+                    prediction['timeframe'] = "within 3 months"
+                else:
+                    prediction['timeframe'] = "beyond 3 months"
+                
+                prediction['earliest_date'] = datetime.utcnow() + timedelta(days=int(lower_bound))
+                prediction['latest_date'] = datetime.utcnow() + timedelta(days=int(upper_bound))
+            
+            return prediction
+            
+        except Exception as e:
+            logger.error(f"Error calculating confidence intervals: {e}")
+            return prediction
+    
+    def _get_recent_training_data(self) -> List[Dict[str, Any]]:
+        """Get recent training data for confidence interval calculation."""
+        # Get recent validated predictions (last 30 days)
+        recent_date = datetime.utcnow() - timedelta(days=30)
+        
+        recent_predictions = self.db.query(PredictedEvent).filter(
+            PredictedEvent.status.in_(["validated", "invalidated"]),
+            PredictedEvent.created_at >= recent_date,
+            PredictedEvent.accuracy_score.isnot(None)
+        ).limit(50).all()
+        
+        training_data = []
+        for prediction in recent_predictions:
+            pattern = self.db.query(CompetitorPattern).filter(
+                CompetitorPattern.id == prediction.pattern_id
+            ).first()
+            
+            if pattern:
+                features = self._extract_prediction_features(pattern, prediction)
+                actual_timeline = None
+                if prediction.validation_date and prediction.predicted_date:
+                    actual_timeline = (prediction.validation_date - prediction.predicted_date).days
+                
+                training_data.append({
+                    **features,
+                    'actual_timeline': actual_timeline or 30
+                })
+        
+        return training_data
+    
+    def _save_models(self):
+        """Save trained models to disk."""
+        try:
+            if self.timeline_model:
+                joblib.dump(self.timeline_model, os.path.join(self.models_dir, 'timeline_model.pkl'))
+            
+            if self.probability_model:
+                joblib.dump(self.probability_model, os.path.join(self.models_dir, 'probability_model.pkl'))
+            
+            if self.confidence_model:
+                joblib.dump(self.confidence_model, os.path.join(self.models_dir, 'confidence_model.pkl'))
+            
+            if self.feature_scaler:
+                joblib.dump(self.feature_scaler, os.path.join(self.scalers_dir, 'feature_scaler.pkl'))
+            
+            logger.info("Models saved successfully")
+            
+        except Exception as e:
+            logger.error(f"Error saving models: {e}")
+    
+    def _load_models(self) -> bool:
+        """Load trained models from disk."""
+        try:
+            timeline_path = os.path.join(self.models_dir, 'timeline_model.pkl')
+            probability_path = os.path.join(self.models_dir, 'probability_model.pkl')
+            confidence_path = os.path.join(self.models_dir, 'confidence_model.pkl')
+            scaler_path = os.path.join(self.scalers_dir, 'feature_scaler.pkl')
+            
+            if all(os.path.exists(path) for path in [timeline_path, probability_path, confidence_path, scaler_path]):
+                self.timeline_model = joblib.load(timeline_path)
+                self.probability_model = joblib.load(probability_path)
+                self.confidence_model = joblib.load(confidence_path)
+                self.feature_scaler = joblib.load(scaler_path)
+                
+                logger.info("Models loaded successfully")
+                return True
+            else:
+                logger.warning("Some model files not found")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error loading models: {e}")
+            return False
+    
+    def _models_loaded(self) -> bool:
+        """Check if all models are loaded."""
+        return all([
+            self.timeline_model is not None,
+            self.probability_model is not None,
+            self.confidence_model is not None,
+            self.feature_scaler is not None
+        ])
+    
+    def _get_feature_importance(self) -> Dict[str, float]:
+        """Get feature importance from trained models."""
+        if not self.timeline_model:
+            return {}
+        
+        feature_names = [
+            'days_since_last', 'pattern_frequency', 'pattern_confidence',
+            'avg_risk_score', 'risk_trend', 'time_consistency',
+            'impact_diversity', 'seasonal_factor'
+        ]
+        
+        importance = self.timeline_model.feature_importances_
+        return dict(zip(feature_names, importance))
+    
+    def get_model_performance_metrics(self) -> Dict[str, Any]:
+        """Get performance metrics for the ML models."""
+        if not self._models_loaded():
+            return {"status": "models_not_loaded"}
+        
+        # Get recent validation data
+        recent_predictions = self.db.query(PredictedEvent).filter(
+            PredictedEvent.status.in_(["validated", "invalidated"]),
+            PredictedEvent.accuracy_score.isnot(None)
+        ).limit(100).all()
+        
+        if not recent_predictions:
+            return {"status": "no_validation_data"}
+        
+        # Calculate performance metrics
+        total_predictions = len(recent_predictions)
+        accurate_predictions = sum(1 for p in recent_predictions if p.accuracy_score > 0.5)
+        
+        return {
+            "status": "success",
+            "total_predictions": total_predictions,
+            "accurate_predictions": accurate_predictions,
+            "accuracy_rate": accurate_predictions / total_predictions,
+            "feature_importance": self._get_feature_importance(),
+            "model_types": {
+                "timeline": "RandomForestRegressor",
+                "probability": "GradientBoostingClassifier", 
+                "confidence": "RandomForestRegressor"
+            }
+        }
+    
+    def initialize_models(self):
+        """Initialize models by loading from disk or training if needed."""
+        if not self._load_models():
+            logger.info("Models not found, will train when sufficient data is available")
+            return False
+        return True

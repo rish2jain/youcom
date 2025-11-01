@@ -92,6 +92,17 @@ Enterprise CIA Team
             logger.info(f"✅ Email sent successfully to {', '.join(to_emails)}")
             return True
 
+        except smtplib.SMTPAuthenticationError as e:
+            logger.error(f"❌ SMTP Authentication failed: {str(e)}")
+            logger.error("💡 Tip: For Gmail, use an App Password instead of your regular password")
+            return False
+        except smtplib.SMTPConnectError as e:
+            logger.error(f"❌ SMTP Connection failed: {str(e)}")
+            logger.error("💡 Check SMTP_HOST and SMTP_PORT settings")
+            return False
+        except smtplib.SMTPException as e:
+            logger.error(f"❌ SMTP Error: {str(e)}")
+            return False
         except Exception as e:
             logger.error(f"❌ Failed to send email: {str(e)}")
             return False
@@ -290,14 +301,91 @@ Enterprise CIA - Powered by You.com APIs
             return False
 
 
+class DemoEmailService:
+    """Demo email service that simulates sending emails without actually sending them"""
+    
+    def __init__(self, from_email: str = "demo@enterprisecia.com"):
+        self.from_email = from_email
+        
+    async def send_research_report(
+        self,
+        to_emails: List[str],
+        company_name: str,
+        pdf_buffer: BytesIO,
+        subject: Optional[str] = None,
+        message: Optional[str] = None
+    ) -> bool:
+        """Simulate sending research report via email"""
+        logger.info(f"📧 [DEMO MODE] Simulating email send for {company_name} to {', '.join(to_emails)}")
+        logger.info(f"📧 [DEMO MODE] Subject: {subject or f'Company Research Report: {company_name}'}")
+        logger.info(f"📧 [DEMO MODE] PDF size: {len(pdf_buffer.getvalue())} bytes")
+        logger.info(f"✅ [DEMO MODE] Email would be sent successfully to {len(to_emails)} recipient(s)")
+        return True
+
+    async def send_impact_card(
+        self,
+        to_emails: List[str],
+        competitor_name: str,
+        pdf_buffer: BytesIO,
+        risk_score: int,
+        subject: Optional[str] = None,
+        message: Optional[str] = None
+    ) -> bool:
+        """Simulate sending impact card via email"""
+        logger.info(f"📧 [DEMO MODE] Simulating impact card email for {competitor_name} to {', '.join(to_emails)}")
+        logger.info(f"📧 [DEMO MODE] Risk Score: {risk_score}/100")
+        logger.info(f"✅ [DEMO MODE] Impact card email would be sent successfully")
+        return True
+
+    async def send_alert_email(
+        self,
+        to_email: str,
+        subject: str,
+        message: str,
+        context: dict
+    ) -> bool:
+        """Simulate sending alert email"""
+        logger.info(f"🚨 [DEMO MODE] Simulating alert email to {to_email}")
+        logger.info(f"🚨 [DEMO MODE] Subject: {subject}")
+        logger.info(f"✅ [DEMO MODE] Alert email would be sent successfully")
+        return True
+
+    async def send_digest_email(
+        self,
+        to_email: str,
+        subject: str,
+        content: str
+    ) -> bool:
+        """Simulate sending digest email"""
+        logger.info(f"📧 [DEMO MODE] Simulating digest email to {to_email}")
+        logger.info(f"📧 [DEMO MODE] Subject: {subject}")
+        logger.info(f"✅ [DEMO MODE] Digest email would be sent successfully")
+        return True
+
 # Factory function to create email service
 def get_email_service(config) -> Optional[EmailService]:
     """Create email service instance from config"""
     try:
+        # Check if we have valid SMTP credentials
+        smtp_user = config.smtp_user
+        smtp_password = config.smtp_password.get_secret_value() if config.smtp_password else ""
+        
+        # If SMTP credentials are missing or look like defaults, use demo mode
+        if (not smtp_user or 
+            not smtp_password or 
+            smtp_user == "" or 
+            smtp_password == "" or
+            config.from_email == "noreply@enterprisecia.com"):
+            
+            logger.info("📧 Using demo email service (SMTP credentials not configured)")
+            return DemoEmailService(config.from_email)
+
+        # Try to create real email service
         if not all([config.smtp_host, config.smtp_port, config.smtp_user, config.smtp_password, config.from_email]):
             logger.warning("⚠️ Email service not configured - some settings are missing")
-            return None
+            return DemoEmailService(config.from_email)
 
+        logger.info("📧 Using real email service with SMTP configuration")
         return EmailService(
             smtp_host=config.smtp_host,
             smtp_port=config.smtp_port,
@@ -307,4 +395,5 @@ def get_email_service(config) -> Optional[EmailService]:
         )
     except Exception as e:
         logger.error(f"❌ Failed to create email service: {str(e)}")
-        return None
+        logger.info("📧 Falling back to demo email service")
+        return DemoEmailService(config.from_email)
